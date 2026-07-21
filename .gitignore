@@ -1,0 +1,62 @@
+# Sistemas operativos
+.DS_Store
+Thumbs.db
+
+# Editores e IDE
+.vscode/
+.idea/
+*.iml
+
+# Java y Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/timing.properties
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+
+# Node y frontend
+node_modules/
+dist/
+build/
+coverage/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+application-local.properties
+application-secret.properties
+
+# Logs
+*.log
+logs/
+
+# Credenciales y llaves
+*.pem
+*.key
+*.p12
+*.jks
+credentials.json
+
+# Datos originales
+data-science/data/raw/*
+!data-science/data/raw/.gitkeep
+!data-science/data/raw/README.md
+
+# Archivos temporales
+*.tmp
+*.temp
+*.swp
+*.swo
