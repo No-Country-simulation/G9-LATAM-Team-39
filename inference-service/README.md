@@ -1,39 +1,71 @@
 # Inference Service
 
-Este módulo contendrá un servicio independiente en Python encargado de cargar y ejecutar el modelo de Machine Learning.
+Servicio independiente en Python que carga el modelo de Machine Learning **desde OCI Object Storage** y ejecuta la inferencia. Funciona como puente entre el backend Java y el modelo serializado.
 
-## Propósito
+> Arquitectura global y **contrato único**: ver `../docs/` y `../docs/contrato-api.md`. Este README es operativo.
 
-El modelo será entrenado con herramientas de Python y Scikit-learn. Como la API principal estará desarrollada con Java y Spring Boot, este servicio funcionará como puente entre el backend y el modelo serializado.
+> Reparto por frentes: ver "Frentes de trabajo" en la documentación de No Country.
 
-## Responsabilidades previstas
+## Cómo correr
 
-- Cargar el modelo entrenado.
+```bash
+# desde inference-service/
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+- API: `http://localhost:8000`
+- Docs: `http://localhost:8000/docs`
+
+## Variables de entorno (OCI)
+
+| Variable | Descripción |
+|---|---|
+| `OCI_BUCKET` | Nombre del bucket de Object Storage |
+| `OCI_NAMESPACE` | Namespace de OCI |
+| `OCI_MODEL_OBJECT` | Nombre del objeto del modelo (ej. `model.joblib`) |
+| `OCI_CONFIG_FILE` | Ruta al config de OCI (ej. `~/.oci/config`) |
+
+## Carga del modelo desde OCI (requisito obligatorio)
+
+Al arrancar, el servicio **descarga `OCI_MODEL_OBJECT` desde el bucket** de Object Storage y lo carga con Joblib. Esto cubre el requisito obligatorio de OCI del hackathon.
+
+**Probar primero con un `.joblib` dummy** (ver `../docs/guia-oci.md`) antes de tener el modelo real. Si la descarga y carga funcionan con el dummy, el requisito de OCI queda cerrado desde el Sprint 1.
+
+## Endpoint interno
+
+`POST /predict` — recibe las 5 variables del contrato y devuelve **solo**:
+
+```json
+{ "categoria": "Ineficiente", "probabilidad": 0.81 }
+```
+
+El costo, la moneda y las recomendaciones NO se calculan aquí; los agrega el backend.
+
+## Responsabilidades del módulo
+
+- Descargar y cargar el modelo entrenado desde OCI al arrancar.
 - Validar los datos recibidos desde el backend.
-- Aplicar las mismas transformaciones utilizadas durante el entrenamiento.
-- Realizar la predicción.
-- Obtener la probabilidad mediante `predict_proba`, cuando el modelo lo soporte.
-- Devolver la categoría y la probabilidad.
+- Aplicar las **mismas transformaciones** usadas en el entrenamiento.
+- Realizar la predicción y obtener la probabilidad (`predict_proba` cuando el modelo lo soporte).
+- Devolver categoría y probabilidad.
 - Gestionar errores de carga o predicción.
 
-## Flujo previsto
+## Tecnologías
 
-1. Spring Boot recibe la solicitud del frontend.
-2. Spring Boot valida los datos.
-3. Spring Boot envía los datos al servicio de inferencia.
-4. El servicio carga o utiliza el modelo previamente cargado.
-5. El modelo genera la predicción.
-6. El servicio devuelve la categoría y la probabilidad.
-7. Spring Boot completa la respuesta para el frontend.
+Python 3.11, FastAPI, Uvicorn, Scikit-learn, Pandas, Joblib, SDK de OCI (`oci`).
 
-## Tecnologías previstas
+## Estructura sugerida
 
-- Python
-- FastAPI
-- Uvicorn
-- Scikit-learn
-- Pandas
-- Joblib
+```
+inference-service/
+├── app/
+│   ├── main.py          # FastAPI + endpoint /predict
+│   ├── model_loader.py  # descarga desde OCI + joblib.load
+│   └── schema.py        # modelos Pydantic del contrato
+└── requirements.txt
+```
 
 ## Estado
 

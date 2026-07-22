@@ -1,81 +1,80 @@
-# Analizador Inteligente de Consumo Energético
+# Analizador Inteligente de Consumo Energético — EnergiAI
 
-Proyecto desarrollado para el Hackathon ONE – Proyectos G9 de Alura + Oracle con NoCountry.
+Proyecto desarrollado para el **Hackathon ONE (Oracle Next Education) – Alura + Oracle con No Country**.
 
 ## Objetivo
 
-Desarrollar una solución que analice información relacionada con el consumo energético de viviendas y clasifique su perfil como:
+Analizar información del consumo energético de una vivienda y clasificar su perfil como **Eficiente**, **Moderado** o **Ineficiente**. La aplicación devuelve la categoría estimada, la probabilidad del modelo, el costo mensual de referencia, la tarifa de referencia y recomendaciones de optimización, expuestos mediante una **API REST**. La arquitectura utiliza **al menos un servicio de OCI** (requisito obligatorio).
 
-- Eficiente
-- Moderado
-- Ineficiente
+## Estrategia de datos
 
-La aplicación devolverá la categoría estimada, la probabilidad del modelo, el costo mensual de referencia y recomendaciones para optimizar el consumo energético.
+El dataset se **genera de forma sintética** con reglas de etiquetado explícitas y justificadas por el equipo de Data Science, tal como pide la descripción del proyecto (*"base de datos generada manualmente o simulada"* y *"definir y justificar los criterios"*).
 
-## Datos de entrada
+Los rangos se **calibran con la fuente pública ENCEVI 2018 (INEGI)**, usada como respaldo para justificar que los valores simulados son plausibles. ENCEVI **no** se usa como dataset directo: no contiene consumo en kWh (registra el monto pagado en pesos, sobre 13 tablas relacionales), por lo que no mapea al contrato sin una estimación costosa y con error alto.
 
-El MVP utilizará inicialmente los siguientes campos:
+## Arquitectura
 
-- `consumo_kwh`: consumo mensual de energía.
-- `uso_horario_pico`: indica si existe uso de equipos durante el horario considerado de mayor demanda.
-- `cantidad_equipos`: número total de equipos eléctricos considerados.
-- `tipo_inmueble`: tipo de vivienda o inmueble.
-- `horas_alto_consumo`: tiempo estimado de uso de equipos de alto consumo.
+Arquitectura de **dos servicios**: Python entrena y sirve el modelo; Java consume la inferencia.
 
-## Resultado esperado
+- `backend/`: API REST principal en Java + Spring Boot (validación, orquestación, costo, recomendaciones).
+- `inference-service/`: servicio Python (FastAPI) que carga el modelo desde OCI y ejecuta la inferencia.
+- `data-science/`: datos, EDA, reglas de etiquetado, entrenamiento, evaluación y serialización del modelo.
+- `frontend/`: **opcional**, interfaz mínima de captura y visualización (no bloquea el MVP).
+- `docs/`: documentación técnica y funcional. **Fuente de verdad** del contrato, la arquitectura y el plan.
 
-La solución podrá devolver:
+### Flujo general
 
-- Categoría energética.
-- Probabilidad o nivel de confianza del modelo.
-- Costo mensual estimado.
-- Tarifa de referencia.
-- Recomendaciones de optimización.
-
-## Arquitectura propuesta
-
-- `backend/`: API REST principal desarrollada con Java y Spring Boot.
-- `frontend/`: interfaz para captura de datos y visualización de resultados.
-- `data-science/`: procesamiento de datos, análisis exploratorio, entrenamiento y evaluación del modelo.
-- `inference-service/`: servicio Python encargado de cargar y ejecutar el modelo de Machine Learning.
-- `docs/`: documentación técnica, funcional y de despliegue.
-
-## Flujo general
-
-1. El usuario captura los datos en el frontend.
-2. El frontend envía la solicitud al backend.
+1. El usuario captura los datos.
+2. El frontend/cliente envía la solicitud al backend Java.
 3. El backend valida la información.
-4. El backend solicita una predicción al servicio de inferencia.
-5. El servicio de inferencia ejecuta el modelo entrenado.
+4. El backend solicita la predicción al `inference-service` (Python).
+5. El servicio de inferencia ejecuta el modelo y devuelve categoría + probabilidad.
 6. El backend completa el resultado con costo y recomendaciones.
-7. El frontend presenta el análisis al usuario.
+7. El frontend/cliente presenta el análisis.
+
+## Contrato de la API (resumen)
+
+`POST /analisis-energetico`
+
+**Entrada:**
+
+```json
+{
+  "consumo_kwh": 420,
+  "uso_horario_pico": true,
+  "cantidad_equipos": 10,
+  "tipo_inmueble": "Casa",
+  "horas_alto_consumo": 8
+}
+```
+
+**Salida:**
+
+```json
+{
+  "categoria": "Ineficiente",
+  "probabilidad": 0.81,
+  "costo_estimado_mensual": 315.00,
+  "moneda": "BRL",
+  "tarifa_referencia_kwh": 0.75,
+  "recomendaciones": [
+    "Reducir el uso de equipos durante horarios pico",
+    "Evaluar aparatos con alto consumo energético",
+    "Distribuir actividades de mayor consumo a lo largo del día"
+  ]
+}
+```
+
+`costo_estimado_mensual = consumo_kwh × 0.75` (tarifa de referencia **R$ 0,75/kWh** de la descripción del proyecto; contexto Brasil, no peso mexicano). El contrato completo y único vive en `docs/contrato-api.md`.
 
 ## Tecnologías previstas
 
-### Backend
+**Backend:** Java 17+, Spring Boot 3.x, Maven, API REST, OpenAPI/Swagger.
 
-- Java
-- Spring Boot
-- Maven
-- API REST
-- OpenAPI/Swagger
+**Data Science e inferencia:** Python 3.11, Pandas, Scikit-learn, Joblib, FastAPI. Modelos candidatos a comparar: Regresión Logística, Árbol de Decisión, Random Forest (se elige el mejor por métricas; la descripción del proyecto los recomienda pero permite otros).
 
-### Data Science e inferencia
-
-- Python
-- Pandas
-- Scikit-learn
-- Joblib
-- FastAPI
-- Random Forest
-
-### Infraestructura
-
-- GitHub
-- Oracle Cloud Infrastructure
+**Infraestructura:** GitHub, Oracle Cloud Infrastructure (Object Storage como servicio OCI mínimo).
 
 ## Estado
 
-Proyecto en etapa inicial de desarrollo.
-
-La arquitectura y las tecnologías podrán ajustarse durante el hackathon según las decisiones del equipo.
+Proyecto en etapa inicial. La arquitectura y las tecnologías pueden ajustarse durante el hackathon. Ver `docs/` para la documentación completa, el plan por sprints y los frentes de trabajo.

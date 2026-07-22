@@ -60,3 +60,6 @@ data-science/data/raw/*
 *.temp
 *.swp
 *.swo
+
+*Zone.Identifier
+*:Zone.Identifier
