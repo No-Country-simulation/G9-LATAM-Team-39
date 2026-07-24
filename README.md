@@ -8,9 +8,14 @@ Analizar información del consumo energético de una vivienda y clasificar su pe
 
 ## Estrategia de datos
 
-El dataset se **genera de forma sintética** con reglas de etiquetado explícitas y justificadas por el equipo de Data Science, tal como pide la descripción del proyecto (*"base de datos generada manualmente o simulada"* y *"definir y justificar los criterios"*).
+El dataset se construye a partir de los **microdatos reales de ENCEVI 2018 (INEGI)**. La descripción del proyecto permite datos *"recopilados de fuentes públicas"* y exige **definir y justificar los criterios** de cada perfil de eficiencia.
 
-Los rangos se **calibran con la fuente pública ENCEVI 2018 (INEGI)**, usada como respaldo para justificar que los valores simulados son plausibles. ENCEVI **no** se usa como dataset directo: no contiene consumo en kWh (registra el monto pagado en pesos, sobre 13 tablas relacionales), por lo que no mapea al contrato sin una estimación costosa y con error alto.
+El proceso tiene dos pasos:
+
+1. **`Energia.py`** procesa las 13 tablas de ENCEVI y calcula el consumo **aparato por aparato** (potencia × horas × cantidad). Produce una base de 28,763 hogares con las 5 variables del contrato.
+2. **`etiquetar_dataset.py`** agrega la columna `categoria` con un sistema de puntos multifactor (consumo + horario pico + horas + intensidad), cuyos umbrales se calculan con los percentiles del propio dataset.
+
+`consumo_kwh` es una **estimación física**, no una lectura de medidor: ENCEVI registra el monto pagado en pesos, no kilovatios. La categoría sale de las reglas del equipo, documentadas en `docs/reglas-etiquetado.md`.
 
 ## Arquitectura
 
@@ -20,7 +25,7 @@ Arquitectura de **dos servicios**: Python entrena y sirve el modelo; Java consum
 - `inference-service/`: servicio Python (FastAPI) que carga el modelo desde OCI y ejecuta la inferencia.
 - `data-science/`: datos, EDA, reglas de etiquetado, entrenamiento, evaluación y serialización del modelo.
 - `frontend/`: **opcional**, interfaz mínima de captura y visualización (no bloquea el MVP).
-- `docs/`: documentación técnica y funcional. **Fuente de verdad** del contrato, la arquitectura y el plan.
+- `docs/`: documentación técnica y funcional. **Única versión válida** del contrato, la arquitectura y el plan.
 
 ### Flujo general
 
@@ -52,6 +57,7 @@ Arquitectura de **dos servicios**: Python entrena y sirve el modelo; Java consum
 
 ```json
 {
+  "id": "a3f1c9e2-5b7d-4e88-9c21-77f0b2d4e1a9",
   "categoria": "Ineficiente",
   "probabilidad": 0.81,
   "costo_estimado_mensual": 315.00,
@@ -61,7 +67,8 @@ Arquitectura de **dos servicios**: Python entrena y sirve el modelo; Java consum
     "Reducir el uso de equipos durante horarios pico",
     "Evaluar aparatos con alto consumo energético",
     "Distribuir actividades de mayor consumo a lo largo del día"
-  ]
+  ],
+  "fecha_analisis": "2026-07-23T18:40:00Z"
 }
 ```
 

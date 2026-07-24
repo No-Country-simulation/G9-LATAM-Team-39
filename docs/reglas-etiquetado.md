@@ -1,22 +1,52 @@
-# Reglas de etiquetado — Perfil de eficiencia energética (v1)
+# Reglas de etiquetado — Perfil de eficiencia energética (v3)
 
-**Objetivo:** definir de forma reproducible y justificada la variable objetivo `categoria` ∈ {`EFICIENTE`, `MODERADO`, `INEFICIENTE`} a partir de las 5 variables de entrada. Estas reglas se usan para (1) etiquetar el dataset sintético y (2) documentar el criterio ante los jueces.
+**Objetivo:** definir de forma reproducible y justificada la variable objetivo `categoria` ∈ {`EFICIENTE`, `MODERADO`, `INEFICIENTE`}, a partir de las 5 variables de entrada.
 
-> **v1 = punto de partida.** Los umbrales son deliberadamente explícitos para poder ajustarlos. Data Science debe validar que producen un dataset razonablemente balanceado y ajustar si hace falta.
+**Se aplican sobre hogares reales** derivados de ENCEVI 2018 (28,763 viviendas), no sobre datos simulados. Implementación en `data-science/src/etiquetar_dataset.py`.
 
 ---
 
-## Enfoque: sistema de puntos de ineficiencia
+## Por qué no etiquetamos por terciles del consumo
 
-No usamos el consumo bruto como único criterio, porque un hogar grande consume más sin ser necesariamente ineficiente. En su lugar sumamos **puntos de ineficiencia** de cuatro factores. A mayor puntaje, peor perfil.
+La primera versión asignaba la categoría cortando `consumo_kwh` en terciles (P33 y P67). Es un método estándar y objetivo, pero **univariado**: la etiqueta dependía de una sola variable.
+
+Al medirlo con un modelo entrenado:
+
+| Variable | Importancia con terciles |
+|---|---|
+| `consumo_kwh` | **100 %** |
+| `horas_alto_consumo` | 0 % |
+| `cantidad_equipos` | 0 % |
+| `uso_horario_pico` | 0 % |
+| Accuracy | 100 % (señal de alarma) |
+
+Dos consecuencias: el usuario llenaría cinco campos y solo uno cambiaría el resultado; y si la categoría depende solo del consumo, **no hace falta machine learning** — bastan dos `if`.
+
+Por eso pasamos a un **sistema de puntuación multifactor**.
+
+---
+
+## Enfoque: puntos de ineficiencia
+
+Cuatro factores suman puntos. A mayor puntaje, peor perfil.
 
 ```
-score = P_consumo + P_pico + P_horas + P_intensidad_equipos
+puntaje = P1 consumo + P2 horario pico + P3 horas + P4 intensidad
 ```
 
-### Paso 0 — Ajuste por tipo de inmueble
+| Puntaje total | Categoría |
+|---|---|
+| 0 a 4 | `EFICIENTE` |
+| 5 a 8 | `MODERADO` |
+| 9 o más | `INEFICIENTE` |
 
-El consumo se normaliza según el tamaño esperado del inmueble, para no castigar a las viviendas grandes:
+Máximo posible: 8 + 2 + 4 + 3 = **17 puntos**.
+
+---
+
+## Paso 0 — Ajuste por tipo de vivienda
+
+Antes de evaluar el consumo se normaliza por el tamaño esperado de la vivienda, para no castigar a las casas grandes por serlo:
 
 ```
 consumo_ajustado = consumo_kwh / factor_tipo
@@ -24,125 +54,123 @@ consumo_ajustado = consumo_kwh / factor_tipo
 
 | `tipo_inmueble` | `factor_tipo` |
 |---|---|
-| `Apartamento` | 0.85 |
-| `Casa` | 1.00 |
-| `Casa grande` | 1.25 |
+| Departamento (y vivienda compartida) | 0.85 |
+| Casa / Otro | 1.00 |
 
-Interpretación: un consumo de 420 kWh "pesa" más en un apartamento (ajustado ≈ 494) que en una casa grande (ajustado = 336).
+Son los únicos tres valores que acepta el contrato de la API. El script **normaliza** cualquier otro antes de calcular: `Vivienda_compartida` → `Otro`, `Apartamento` → `Departamento`, `Casa grande` → `Casa`. Es decir, "Casa grande" **no** recibe un factor propio; termina con 1.00 como cualquier casa. Ver `decisiones.md` (D11).
 
-### P_consumo — magnitud del consumo (sobre `consumo_ajustado`)
+Dividir entre un valor menor que 1 **sube** el resultado (penaliza más); entre uno mayor que 1 lo **baja**.
 
-| `consumo_ajustado` (kWh) | Puntos |
+> Estos factores son criterio del equipo, no salen de ENCEVI.
+
+---
+
+## Los cuatro puntajes
+
+Los umbrales **no son valores fijos**: se calculan con los percentiles del propio dataset cada vez que corre el script. Los valores mostrados corresponden al dataset actual y cambian si cambian los datos.
+
+### P1 · Consumo (0 a 8 puntos)
+
+Cortes en los percentiles **20 / 40 / 60 / 80** del consumo ajustado.
+
+| Consumo ajustado | Puntos |
 |---|---|
-| < 150 | 0 |
-| 150 – 249 | 2 |
-| 250 – 349 | 4 |
-| 350 – 499 | 6 |
-| ≥ 500 | 8 |
+| menos de 57.1 kWh | 0 |
+| 57.1 – 83.1 | 2 |
+| 83.1 – 113.8 | 4 |
+| 113.8 – 172.7 | 6 |
+| 172.7 o más | 8 |
 
-### P_pico — uso en horario de mayor demanda
+### P2 · Uso en horario pico (0 o 2 puntos)
 
-| `uso_horario_pico` | Puntos |
+Binario, sin percentiles. Penaliza porque en hora pico la energía es más cara y contaminante.
+
+| ¿Usa equipos en horario pico? | Puntos |
 |---|---|
-| `false` | 0 |
-| `true` | 2 |
+| No | 0 |
+| Sí | 2 |
 
-### P_horas — horas diarias de alto consumo
+### P3 · Horas de alto consumo (0 a 4 puntos)
 
-| `horas_alto_consumo` | Puntos |
+Cortes en los percentiles **40 / 70 / 90**.
+
+| Horas equivalentes | Puntos |
 |---|---|
-| ≤ 2 | 0 |
-| 3 – 5 | 2 |
-| 6 – 8 | 3 |
-| > 8 | 4 |
+| menos de 0.02 | 0 |
+| 0.02 – 0.23 | 2 |
+| 0.23 – 1.95 | 3 |
+| más de 1.95 | 4 |
 
-### P_intensidad_equipos — kWh por equipo (proxy de eficiencia de los aparatos)
+> **No son horas de reloj.** En la base de ENCEVI esta variable son *horas equivalentes de una carga de 1.5 kW* (ver la metodología de `Energia.py`). Por eso los umbrales son valores pequeños.
+
+### P4 · Intensidad (0 a 3 puntos)
 
 ```
-ratio = consumo_kwh / max(cantidad_equipos, 1)
+intensidad = consumo_kwh / cantidad_equipos
 ```
 
-| `ratio` (kWh/equipo) | Puntos |
+Cortes en los percentiles **40 / 70 / 90**.
+
+| kWh por equipo | Puntos |
 |---|---|
-| < 20 | 0 |
-| 20 – 39 | 1 |
-| 40 – 59 | 2 |
-| ≥ 60 | 3 |
+| menos de 10.6 | 0 |
+| 10.6 – 15.1 | 1 |
+| 15.1 – 23.6 | 2 |
+| 23.6 o más | 3 |
 
-Interpretación: muchos equipos con consumo total moderado → ratio bajo → aparatos/uso eficientes. Pocos equipos que consumen mucho → ratio alto → aparatos ineficientes.
+Interpretación: muchos equipos con consumo total moderado → intensidad baja → equipos eficientes. Pocos equipos que consumen mucho → intensidad alta. Así no penalizamos *tener* aparatos, sino consumir mucho **por** aparato.
 
 ---
 
-## Clasificación final
+## Resultado
 
-Puntaje máximo posible = 8 + 2 + 4 + 3 = **17**.
+**Balance de clases** sobre 28,763 hogares:
 
-| `score` | `categoria` |
+| Categoría | % |
 |---|---|
-| ≤ 4 | `EFICIENTE` |
-| 5 – 9 | `MODERADO` |
-| ≥ 10 | `INEFICIENTE` |
+| EFICIENTE | 33.4 % |
+| MODERADO | 29.3 % |
+| INEFICIENTE | 37.4 % |
+
+**Importancia de variables** en el modelo entrenado:
+
+| Variable | Antes (terciles) | Ahora (multifactor) |
+|---|---|---|
+| `consumo_kwh` | 100 % | 58.8 % |
+| `horas_alto_consumo` | 0 % | 20.8 % |
+| `cantidad_equipos` | 0 % | 14.4 % |
+| `uso_horario_pico` | 0 % | 5.7 % |
+| `tipo_inmueble` | 0 % | 0.3 % |
+| Accuracy | 100 % | 99.4 % |
 
 ---
 
-## Ejemplos verificados
+## Tres hogares reales de ejemplo
 
-### Ejemplo 1 — el de la descripción del proyecto (esperado: Ineficiente)
-
-Entrada: `consumo_kwh=420, uso_horario_pico=true, cantidad_equipos=10, tipo_inmueble="Casa", horas_alto_consumo=8`
-
-- `consumo_ajustado = 420 / 1.00 = 420` → P_consumo = **6**
-- `uso_horario_pico = true` → P_pico = **2**
-- `horas_alto_consumo = 8` (6–8) → P_horas = **3**
-- `ratio = 420 / 10 = 42` (40–59) → P_intensidad = **2**
-- **score = 13 → INEFICIENTE** ✓
-
-### Ejemplo 2 — eficiente
-
-Entrada: `consumo_kwh=120, uso_horario_pico=false, cantidad_equipos=6, tipo_inmueble="Apartamento", horas_alto_consumo=1`
-
-- `consumo_ajustado = 120 / 0.85 = 141` → P_consumo = **0**
-- P_pico = **0**
-- `horas ≤ 2` → P_horas = **0**
-- `ratio = 120 / 6 = 20` (20–39) → P_intensidad = **1**
-- **score = 1 → EFICIENTE** ✓
-
-### Ejemplo 3 — moderado
-
-Entrada: `consumo_kwh=280, uso_horario_pico=false, cantidad_equipos=8, tipo_inmueble="Casa", horas_alto_consumo=4`
-
-- `consumo_ajustado = 280` → P_consumo = **4**
-- P_pico = **0**
-- `horas 3–5` → P_horas = **2**
-- `ratio = 280 / 8 = 35` → P_intensidad = **1**
-- **score = 7 → MODERADO** ✓
+| | Eficiente | Moderado | Ineficiente |
+|---|---|---|---|
+| Consumo | 4.3 kWh | 105.2 kWh | 221.8 kWh |
+| Horario pico | sí | no | sí |
+| Equipos | 3 | 14 | 19 |
+| Horas equivalentes | 0.0 | 0.11 | 0.27 |
+| **P1 consumo** | 0 | 4 | 8 |
+| **P2 pico** | 2 | 0 | 2 |
+| **P3 horas** | 0 | 2 | 3 |
+| **P4 intensidad** | 0 | 0 | 1 |
+| **Total** | **2** | **6** | **14** |
 
 ---
 
-## Guía para generar el dataset sintético
+## Qué se puede ajustar
 
-Muestrear cada variable en rangos plausibles (calibrar con ENCEVI 2018 y consumo residencial brasileño), aplicar las reglas y obtener la etiqueta.
+- Los percentiles de corte (`CORTES_CONSUMO`, `CORTES_HORAS`, `CORTES_INTENS`).
+- Los factores por tipo de vivienda.
+- Los cortes del puntaje final (`CORTE_EFICIENTE`, `CORTE_MODERADO`).
 
-| Variable | Rango de muestreo sugerido |
-|---|---|
-| `consumo_kwh` | 50 – 800 (distribución sesgada a valores medios; opcionalmente condicionada al tipo) |
-| `uso_horario_pico` | Bernoulli(p ≈ 0.4) |
-| `cantidad_equipos` | 3 – 25 |
-| `tipo_inmueble` | categórico: Apartamento / Casa / Casa grande |
-| `horas_alto_consumo` | 0 – 14 |
-
-Recomendaciones:
-- Generar varios miles de filas, aplicar las reglas y **revisar el balance de clases**. Si una clase queda muy pequeña, ajustar umbrales o el muestreo (o rebalancear).
-- Documentar en el notebook la calibración de rangos con ENCEVI como justificación.
-- Fijar una semilla aleatoria para reproducibilidad.
+Cualquier cambio se prueba igual: correr el script y revisar **dos métricas** — que el balance de clases siga razonable (ninguna clase bajo 15 %) y que ninguna variable quede en 0 % de importancia. Registrar el cambio en `decisiones.md`.
 
 ---
 
-## Qué se puede ajustar (parámetros)
+## Nota sobre el modelo
 
-- `factor_tipo` por tipo de inmueble.
-- Umbrales de cada tabla de puntos.
-- Cortes finales (`≤4`, `5–9`, `≥10`).
-- Pesos relativos (hoy el consumo domina con máx. 8 pts; se puede rebalancear).
-
-Todo cambio se registra en `decisiones.md`.
+Como la etiqueta se deriva de estas reglas, el modelo tiende a re-aprenderlas y el accuracy resulta alto (~99 %). Es esperado. El valor del trabajo está en la justificación de los criterios y en la evaluación honesta, no en la métrica.

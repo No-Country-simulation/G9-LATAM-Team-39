@@ -1,9 +1,9 @@
 # Documentación
 
-Documentación técnica y funcional del proyecto. Esta carpeta es la **fuente de verdad** de todo lo compartido: contrato, arquitectura, plan y decisiones. Los README de cada módulo **enlazan aquí en lugar de duplicar**.
+Documentación técnica y funcional del proyecto. Esta carpeta es la **única versión válida** de todo lo compartido: contrato, arquitectura, plan y decisiones. Los README de cada módulo **enlazan aquí en lugar de duplicar**.
 
 
-## Regla de fuente única
+## Regla de versión única
 
 - Lo **compartido** (contrato de la API, arquitectura, plan por sprints, reglas de etiquetado, decisiones) vive **aquí y en un solo lugar**.
 - Los README de módulo (`backend/`, `inference-service/`, `data-science/`, `frontend/`) son **solo operativos** (cómo correr esa pieza). No repiten el contrato ni la arquitectura; enlazan a `docs/`.
@@ -14,9 +14,11 @@ Documentación técnica y funcional del proyecto. Esta carpeta es la **fuente de
 | Documento | Contenido |
 |---|---|
 | `documentacion.md` | Documento principal: resumen, arquitectura, plan por sprints, riesgos |
-| `contrato-api.md` | Contrato JSON de `POST /analisis-energetico` (entrada/salida) — **fuente única** |
+| `contrato-api.md` | Contrato de la API: `POST /analisis-energetico` y `GET /resultados/{id}` |
 | `guia-oci.md` | Paso a paso reproducible de OCI Object Storage (bucket, credenciales, subida/descarga del modelo) |
 | `reglas-etiquetado.md` | Definición y justificación de EFICIENTE / MODERADO / INEFICIENTE |
+| `consumo-por-aparato.md` | Consumo promedio por electrodoméstico (ENCEVI) para las recomendaciones |
+| `flujo-proyecto.md` | Recorrido completo: de ENCEVI al usuario final, con responsables |
 | `decisiones.md` | Registro de decisiones (ADR): qué se decidió y por qué |
 | `casos-prueba.md` | Los 3 ejemplos obligatorios de uso |
 
