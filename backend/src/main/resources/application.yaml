@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/energiai
     username: postgres
-    password: Postgres123
+    password: cp1av5zs
 
   jpa:
     hibernate:
@@ -14,6 +14,12 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui/index.html
+    api-docs:
+        path: /v3/api-docs
 
 server:
   port: 8080
