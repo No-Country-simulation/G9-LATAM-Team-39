@@ -3,11 +3,12 @@ package com.energiai.energy_analysis_api.service.impl;
 import com.energiai.energy_analysis_api.dto.request.AnalisisRequest;
 import com.energiai.energy_analysis_api.dto.response.AnalisisResponse;
 import com.energiai.energy_analysis_api.entity.AnalisisEnergetico;
+import com.energiai.energy_analysis_api.exception.AnalisisNoEncontradoException;
 import com.energiai.energy_analysis_api.mapper.AnalisisMapper;
 import com.energiai.energy_analysis_api.repository.AnalisisEnergeticoRepository;
 import com.energiai.energy_analysis_api.service.AnalisisService;
+
 import org.springframework.stereotype.Service;
-import com.energiai.energy_analysis_api.exception.AnalisisNoEncontradoException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -31,9 +32,11 @@ public class AnalisisServiceImpl implements AnalisisService {
     @Override
     public AnalisisResponse crearAnalisis(AnalisisRequest request) {
 
-        AnalisisEnergetico analisis = mapper.toEntity(request);
+        AnalisisEnergetico analisis =
+                mapper.toEntity(request);
 
-        AnalisisEnergetico analisisGuardado = repository.save(analisis);
+        AnalisisEnergetico analisisGuardado =
+                repository.save(analisis);
 
         return mapper.toResponse(analisisGuardado);
     }
@@ -52,7 +55,8 @@ public class AnalisisServiceImpl implements AnalisisService {
     @Transactional(readOnly = true)
     public AnalisisResponse obtenerPorId(UUID id) {
 
-        AnalisisEnergetico analisis = buscarEntidadPorId(id);
+        AnalisisEnergetico analisis =
+                buscarEntidadPorId(id);
 
         return mapper.toResponse(analisis);
     }
@@ -63,9 +67,13 @@ public class AnalisisServiceImpl implements AnalisisService {
             AnalisisRequest request
     ) {
 
-        AnalisisEnergetico analisisExistente = buscarEntidadPorId(id);
+        AnalisisEnergetico analisisExistente =
+                buscarEntidadPorId(id);
 
-        mapper.updateEntity(analisisExistente, request);
+        mapper.updateEntity(
+                analisisExistente,
+                request
+        );
 
         AnalisisEnergetico analisisActualizado =
                 repository.save(analisisExistente);
@@ -76,7 +84,8 @@ public class AnalisisServiceImpl implements AnalisisService {
     @Override
     public void eliminar(UUID id) {
 
-        AnalisisEnergetico analisis = buscarEntidadPorId(id);
+        AnalisisEnergetico analisis =
+                buscarEntidadPorId(id);
 
         repository.delete(analisis);
     }
@@ -90,8 +99,11 @@ public class AnalisisServiceImpl implements AnalisisService {
         }
 
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
-                        "No se encontró el análisis energético con ID: " + id
-                ));
+                .orElseThrow(() ->
+                        new AnalisisNoEncontradoException(
+                                "No se encontró el análisis energético con ID: "
+                                        + id
+                        )
+                );
     }
 }

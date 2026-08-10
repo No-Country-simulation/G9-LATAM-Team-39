@@ -3,8 +3,10 @@ package com.energiai.energy_analysis_api.service;
 import com.energiai.energy_analysis_api.dto.request.AnalisisRequest;
 import com.energiai.energy_analysis_api.dto.response.AnalisisResponse;
 import com.energiai.energy_analysis_api.entity.AnalisisEnergetico;
-import com.energiai.energy_analysis_api.exception.AnalisisNotFoundException;
+import com.energiai.energy_analysis_api.exception.AnalisisNoEncontradoException;
+import com.energiai.energy_analysis_api.mapper.AnalisisMapper;
 import com.energiai.energy_analysis_api.repository.AnalisisEnergeticoRepository;
+import com.energiai.energy_analysis_api.service.impl.AnalisisServiceImpl;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,53 +31,79 @@ class AnalisisServiceImplTest {
     @Mock
     private AnalisisEnergeticoRepository repository;
 
+    @Mock
+    private AnalisisMapper mapper;
+
     @InjectMocks
     private AnalisisServiceImpl service;
 
     private AnalisisEnergetico analisis;
     private AnalisisRequest request;
+    private AnalisisResponse response;
 
     @BeforeEach
     void setUp() {
 
+        UUID id = UUID.randomUUID();
+        LocalDateTime fecha = LocalDateTime.now();
+
         request = new AnalisisRequest();
-        request.setConsumoKwh(BigDecimal.valueOf(250));
+        request.setConsumoKwh(250.0);
         request.setCantidadEquipos(6);
         request.setUsoHorarioPico(true);
         request.setTipoInmueble("Casa");
         request.setHorasAltoConsumo(5);
 
         analisis = new AnalisisEnergetico();
-        analisis.setId(UUID.randomUUID());
+        analisis.setId(id);
         analisis.setConsumoKwh(BigDecimal.valueOf(250));
         analisis.setCantidadEquipos(6);
         analisis.setUsoHorarioPico(true);
         analisis.setTipoInmueble("Casa");
         analisis.setHorasAltoConsumo(BigDecimal.valueOf(5));
-
         analisis.setCategoria("MEDIO");
         analisis.setProbabilidad(BigDecimal.valueOf(0.85));
         analisis.setCostoEstimadoMensual(BigDecimal.valueOf(120));
-        analisis.setMoneda("PEN");
-        analisis.setFechaAnalisis(LocalDateTime.now());
+        analisis.setMoneda("MXN");
+        analisis.setFechaAnalisis(fecha);
 
+        response = new AnalisisResponse(
+                id,
+                "MEDIO",
+                BigDecimal.valueOf(0.85),
+                BigDecimal.valueOf(120),
+                "MXN",
+                fecha,
+                List.of()
+        );
     }
 
     @Test
-    void debeRegistrarAnalisis() {
+    void debeCrearAnalisis() {
 
-        when(repository.save(any(AnalisisEnergetico.class)))
+        when(mapper.toEntity(request))
                 .thenReturn(analisis);
 
-        AnalisisResponse response =
-                service.registrarAnalisis(request);
+        when(repository.save(analisis))
+                .thenReturn(analisis);
 
-        assertNotNull(response);
-        assertEquals("MEDIO", response.getCategoria());
+        when(mapper.toResponse(analisis))
+                .thenReturn(response);
+
+        AnalisisResponse resultado =
+                service.crearAnalisis(request);
+
+        assertNotNull(resultado);
+        assertEquals("MEDIO", resultado.getCategoria());
+
+        verify(mapper, times(1))
+                .toEntity(request);
 
         verify(repository, times(1))
-                .save(any(AnalisisEnergetico.class));
+                .save(analisis);
 
+        verify(mapper, times(1))
+                .toResponse(analisis);
     }
 
     @Test
@@ -84,13 +112,21 @@ class AnalisisServiceImplTest {
         when(repository.findAll())
                 .thenReturn(List.of(analisis));
 
+        when(mapper.toResponse(analisis))
+                .thenReturn(response);
+
         List<AnalisisResponse> lista =
-                service.obtenerTodosLosAnalisis();
+                service.obtenerTodos();
 
+        assertNotNull(lista);
         assertEquals(1, lista.size());
+        assertEquals("MEDIO", lista.get(0).getCategoria());
 
-        verify(repository).findAll();
+        verify(repository, times(1))
+                .findAll();
 
+        verify(mapper, times(1))
+                .toResponse(analisis);
     }
 
     @Test
@@ -99,12 +135,23 @@ class AnalisisServiceImplTest {
         when(repository.findById(analisis.getId()))
                 .thenReturn(Optional.of(analisis));
 
-        AnalisisResponse response =
-                service.obtenerAnalisisPorId(analisis.getId());
+        when(mapper.toResponse(analisis))
+                .thenReturn(response);
 
-        assertNotNull(response);
-        assertEquals(analisis.getId(), response.getId());
+        AnalisisResponse resultado =
+                service.obtenerPorId(analisis.getId());
 
+        assertNotNull(resultado);
+        assertEquals(
+                analisis.getId(),
+                resultado.getId()
+        );
+
+        verify(repository, times(1))
+                .findById(analisis.getId());
+
+        verify(mapper, times(1))
+                .toResponse(analisis);
     }
 
     @Test
@@ -116,10 +163,59 @@ class AnalisisServiceImplTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                AnalisisNotFoundException.class,
-                () -> service.obtenerAnalisisPorId(id)
+                AnalisisNoEncontradoException.class,
+                () -> service.obtenerPorId(id)
         );
 
+        verify(repository, times(1))
+                .findById(id);
     }
 
+    @Test
+    void debeActualizarAnalisis() {
+
+        when(repository.findById(analisis.getId()))
+                .thenReturn(Optional.of(analisis));
+
+        when(repository.save(analisis))
+                .thenReturn(analisis);
+
+        when(mapper.toResponse(analisis))
+                .thenReturn(response);
+
+        AnalisisResponse resultado =
+                service.actualizar(
+                        analisis.getId(),
+                        request
+                );
+
+        assertNotNull(resultado);
+
+        verify(repository, times(1))
+                .findById(analisis.getId());
+
+        verify(mapper, times(1))
+                .updateEntity(analisis, request);
+
+        verify(repository, times(1))
+                .save(analisis);
+
+        verify(mapper, times(1))
+                .toResponse(analisis);
+    }
+
+    @Test
+    void debeEliminarAnalisis() {
+
+        when(repository.findById(analisis.getId()))
+                .thenReturn(Optional.of(analisis));
+
+        service.eliminar(analisis.getId());
+
+        verify(repository, times(1))
+                .findById(analisis.getId());
+
+        verify(repository, times(1))
+                .delete(analisis);
+    }
 }
