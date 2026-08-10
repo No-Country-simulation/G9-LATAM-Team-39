@@ -1,96 +1,180 @@
-# Inference Service
+# Inference Service — EnergiAI
 
-Servicio independiente en Python que carga el modelo de Machine Learning **desde OCI Object Storage** y ejecuta la inferencia. Funciona como puente entre el backend Java y el modelo serializado.
+Servicio Python (FastAPI) que carga el modelo entrenado y clasifica el perfil
+energético de una vivienda. Solo clasifica: el costo y las recomendaciones son
+responsabilidad del backend Java.
 
-> Arquitectura global y **contrato único**: ver `../docs/` y `../docs/contrato-api.md`. Este README es operativo.
+> Arquitectura global y **contrato único**: ver `../docs/` y `../docs/contrato-api.md`.
+> Este README es operativo.
 
-> Reparto por frentes: ver "Frentes de trabajo" en la documentación de No Country.
-
-## Cómo correr
+## Cómo correr en local
 
 ```bash
 # desde inference-service/
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-- API: `http://localhost:8000`
-- Docs: `http://localhost:8000/docs`
+- API:  http://localhost:8000
+- Docs: http://localhost:8000/docs  (Swagger automático, útil para la demo)
 
-## Variables de entorno (OCI)
+> Arrancar siempre **desde `inference-service/`**. La ruta por defecto del modelo
+> es relativa a esta carpeta.
 
-| Variable | Descripción |
+### Configuración con `.env`
+
+El servicio lee su configuración de un archivo `.env` en `inference-service/`
+(gracias a `python-dotenv`, incluido en el `requirements.txt`). Para empezar,
+copia la plantilla y ajústala:
+
+```bash
+cp .env.example .env
+```
+
+En local no hace falta cambiar nada: el `.env` viene con `MODEL_SOURCE=local` y
+la ruta al modelo ya configurada. El `.env` real **no se sube al repo** (está en
+`.gitignore`); solo se versiona `.env.example` como plantilla.
+
+## Endpoints
+
+| Endpoint | Qué hace |
 |---|---|
-| `OCI_BUCKET` | Nombre del bucket de Object Storage |
-| `OCI_NAMESPACE` | Namespace de OCI |
-| `OCI_MODEL_OBJECT` | Nombre del objeto del modelo (ej. `model.joblib`) |
-| `OCI_CONFIG_FILE` | Ruta al config de OCI (ej. `~/.oci/config`) |
+| `GET /health` | Verifica que el servicio está vivo y el modelo cargado |
+| `POST /predict` | Recibe las 5 variables, devuelve `categoria` + `probabilidad` |
 
-## Carga del modelo desde OCI (requisito obligatorio)
-
-Al arrancar, el servicio **descarga `OCI_MODEL_OBJECT` desde el bucket** de Object Storage y lo carga con Joblib. Esto cubre el requisito obligatorio de OCI del hackathon.
-
-**Probar primero con un `.joblib` dummy** (ver `../docs/guia-oci.md`) antes de tener el modelo real. Si la descarga y carga funcionan con el dummy, el requisito de OCI queda cerrado desde el Sprint 1.
-
-**Si el modelo no carga, el servicio no debe levantar.** Es preferible fallar al arrancar, con un mensaje claro en el log, a quedar respondiendo peticiones sin modelo. El backend ya contempla este caso: si el servicio no responde, devuelve `502 INFERENCE_UNAVAILABLE`.
-
-## Endpoint interno
-
-`POST /predict` — recibe las 5 variables del contrato y devuelve **solo**:
+`POST /predict` devuelve **solo** categoría y probabilidad:
 
 ```json
-{ "categoria": "Ineficiente", "probabilidad": 0.81 }
+{ "categoria": "INEFICIENTE", "probabilidad": 1.0 }
 ```
 
-El costo, la moneda y las recomendaciones NO se calculan aquí; los agrega el backend. El campo `equipos` **nunca llega** a este servicio.
+El campo `equipos` **nunca llega** a este servicio. El costo y las recomendaciones
+los agrega el backend.
 
-## Entrada y codificación de variables
+## El modelo es un Pipeline completo (importante)
 
-El modelo fue entrenado con estas columnas y espera exactamente las mismas, en el mismo formato.
+El `modelo_energiai.joblib` no es solo un clasificador: es un **Pipeline** con dos pasos:
 
-| Variable | Cómo llega | Cómo se codifica |
-|---|---|---|
-| `consumo_kwh` | número | tal cual |
-| `uso_horario_pico` | booleano | **0 / 1** |
-| `cantidad_equipos` | entero | tal cual |
-| `tipo_inmueble` | texto | **one-hot** |
-| `horas_alto_consumo` | número | tal cual |
-
-**`tipo_inmueble` solo admite tres valores: `Casa`, `Departamento` y `Otro`.** El dataset se normaliza a estos tres antes de entrenar (ver `../docs/decisiones.md`, D11), así que el modelo no conoce ningún otro. Si llegara un valor distinto, el one-hot generaría una columna desconocida y la predicción sería inválida: conviene validarlo y devolver un error en vez de predecir.
-
-**El orden de las columnas importa.** Scikit-learn no siempre avisa si llegan desordenadas y las predicciones salen mal en silencio. Reordenar siempre según lo que espera el modelo:
-
-```python
-X = X[modelo.feature_names_in_]
+```
+[ ColumnTransformer (preprocesa) ] → [ RandomForestClassifier (clasifica) ]
 ```
 
-## Responsabilidades del módulo
+El `ColumnTransformer` hace **por dentro** el one-hot de `tipo_inmueble` y el
+escalado de las variables numéricas. Entrada esperada: las **5 variables crudas**,
+con `tipo_inmueble` como texto (`Casa` / `Departamento` / `Otro`).
 
-- Descargar y cargar el modelo entrenado desde OCI al arrancar (una sola vez, no en cada petición).
-- Validar los datos recibidos desde el backend, incluido el catálogo de `tipo_inmueble`.
-- Aplicar las mismas transformaciones del entrenamiento (ver la tabla de arriba) y **respetar el orden de columnas**.
-- Realizar la predicción y obtener la probabilidad (`predict_proba` cuando el modelo lo soporte).
-- Devolver categoría y probabilidad.
-- Gestionar errores de carga o predicción.
+```
+consumo_kwh, uso_horario_pico, cantidad_equipos, tipo_inmueble, horas_alto_consumo
+```
 
-> **Sobre la probabilidad:** como la etiqueta se deriva de reglas deterministas, el modelo suele devolver valores muy altos (cercanos a 1.0). Es esperado y está documentado en `../docs/reglas-etiquetado.md`; no es un error del servicio.
+### Corrección aplicada al conectar el modelo real
 
-## Tecnologías
+La primera versión del servicio hacía one-hot y conversión de tipos **a mano** en
+`main.py` (`_preparar_features`). Al conectar el modelo real dio error 500:
 
-Python 3.11, FastAPI, Uvicorn, Scikit-learn, Pandas, Joblib, SDK de OCI (`oci`).
+```
+ufunc 'isnan' not supported for the input types
+```
 
-## Estructura sugerida
+**Causa:** el servicio preprocesaba y el pipeline volvía a preprocesar → doble
+codificación. **Solución:** `_preparar_features` ahora entrega las 5 variables
+**crudas** y deja que el pipeline haga todo el preprocesamiento. Es el único cambio;
+el resto del servicio quedó igual.
+
+> Este arreglo aplica igual a local y a OCI: cambia *cómo se usa* el modelo, no
+> *de dónde viene*. Al activar OCI no hay que volver a tocar `_preparar_features`.
+
+## Estado: probado en local con el modelo real
+
+El servicio se probó de punta a punta con `modelo_energiai.joblib` (el real, no un
+dummy) desde `/docs`. Las tres categorías se distinguen correctamente:
+
+| Entrada | Resultado |
+|---|---|
+| `consumo 30, Casa, 6 equipos, pico no, 0 horas` | **EFICIENTE** (prob 0.98) |
+| `consumo 45, Departamento, 4 equipos, pico no, 0.2 horas` | **MODERADO** |
+| `consumo 420, Casa, 12 equipos, pico sí, 8 horas` | **INEFICIENTE** (prob 1.0) |
+
+Ejemplo EFICIENTE para copiar en `/docs`:
+
+```json
+{
+  "consumo_kwh": 30,
+  "uso_horario_pico": false,
+  "cantidad_equipos": 6,
+  "tipo_inmueble": "Casa",
+  "horas_alto_consumo": 0.0
+}
+```
+
+Ejemplo INEFICIENTE:
+
+```json
+{
+  "consumo_kwh": 420,
+  "uso_horario_pico": true,
+  "cantidad_equipos": 12,
+  "tipo_inmueble": "Casa",
+  "horas_alto_consumo": 8
+}
+```
+
+La validación también funciona: un `tipo_inmueble` fuera de `Casa/Departamento/Otro`
+(por ejemplo `"Mansion"`) se rechaza con error 422 antes de llegar al modelo.
+
+## Versión de scikit-learn (pendiente de alinear)
+
+El modelo se entrenó con **scikit-learn 1.8.0**. El servicio debe usar la misma
+versión, o al cargar el `.joblib` aparece un `InconsistentVersionWarning` que
+advierte de posibles resultados inválidos. En `requirements.txt`:
+
+```
+scikit-learn==1.8.0
+```
+
+y luego `pip install -r requirements.txt --upgrade`.
+
+## Carga del modelo: local ahora, OCI después
+
+`app/model_loader.py` decide de dónde sale el modelo según la variable
+`MODEL_SOURCE`, que se define en el `.env`:
+
+- `MODEL_SOURCE=local` (por defecto): lee el `.joblib` del disco. La ruta por
+  defecto apunta a `../data-science/models/modelo_energiai.joblib`.
+- `MODEL_SOURCE=oci`: descargará el modelo desde OCI Object Storage (requisito
+  obligatorio del hackathon). La función `_cargar_desde_oci()` tiene el esqueleto
+  listo; se completa cuando exista el bucket.
+
+Para activar OCI, se editan estas variables en el `.env` (los valores los provee
+el encargado de OCI):
+
+```
+MODEL_SOURCE=oci
+OCI_NAMESPACE=<namespace>
+OCI_BUCKET=<bucket>
+OCI_MODEL_OBJECT=modelo_energiai.joblib
+OCI_CONFIG_FILE=~/.oci/config
+```
+
+Las credenciales reales de OCI (el archivo de config y las llaves `.pem`) viven
+en `~/.oci/`, **fuera del proyecto**, y nunca se suben al repo.
+
+**Si el modelo no carga, el servicio no debe levantar.** El backend ya contempla
+este caso: si el servicio no responde, devuelve `502`.
+
+## Estructura
 
 ```
 inference-service/
+├── .env                 # config real (NO se sube al repo)
+├── .env.example         # plantilla de variables (sí se sube)
 ├── app/
-│   ├── main.py          # FastAPI + endpoint /predict
-│   ├── model_loader.py  # descarga desde OCI + joblib.load
-│   └── schema.py        # modelos Pydantic del contrato
+│   ├── main.py          # FastAPI + /predict + /health
+│   ├── model_loader.py  # carga local (por defecto) / OCI, según .env
+│   └── schema.py        # validación de las 5 variables
 └── requirements.txt
 ```
 
-## Estado
-
-El servicio FastAPI todavía no ha sido inicializado.
+El modelo vive en `data-science/models/` (no se duplica aquí). Al pasar a OCI, se
+descargará desde el bucket.
