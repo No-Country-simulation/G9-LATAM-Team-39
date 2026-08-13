@@ -1,128 +1,124 @@
 package com.energiai.energy_analysis_api.service;
 
+import com.energiai.energy_analysis_api.client.InferenceClient;
 import com.energiai.energy_analysis_api.dto.request.AnalisisRequest;
 import com.energiai.energy_analysis_api.dto.response.AnalisisResponse;
+import com.energiai.energy_analysis_api.dto.response.PredictionResponse;
 import com.energiai.energy_analysis_api.entity.AnalisisEnergetico;
+import com.energiai.energy_analysis_api.exception.AnalisisNotFoundException;
 import com.energiai.energy_analysis_api.repository.AnalisisEnergeticoRepository;
 
 import org.springframework.stereotype.Service;
-import com.energiai.energy_analysis_api.exception.AnalisisNotFoundException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
-
 
 @Service
 public class AnalisisServiceImpl implements AnalisisService {
 
     private final AnalisisEnergeticoRepository analisisEnergeticoRepository;
+    private final InferenceClient inferenceClient;
 
-
-    /**
-     * Constructor utilizado para inyectar AnalisisEnergeticoRepository.
-     */
     public AnalisisServiceImpl(
-            AnalisisEnergeticoRepository analisisEnergeticoRepository) {
+            AnalisisEnergeticoRepository analisisEnergeticoRepository,
+            InferenceClient inferenceClient) {
 
         this.analisisEnergeticoRepository = analisisEnergeticoRepository;
+        this.inferenceClient = inferenceClient;
     }
-
 
     @Override
     public AnalisisResponse registrarAnalisis(AnalisisRequest request) {
 
         /*
-         * Creamos la entidad que será utilizada por JPA
-         * para almacenar la información.
+         * 1. Creamos la entidad que se guardará en PostgreSQL.
          */
         AnalisisEnergetico analisis = new AnalisisEnergetico();
 
         /*
-         * Copiamos los datos que existen tanto en
-         * AnalisisRequest como en AnalisisEnergetico.
-         *
-         * AnalisisRequest actualmente contiene:
-         * - consumoKwh
-         * - usoHorarioPico
-         * - cantidadEquipos
-         * - tipoInmueble
-         * - horasAltoConsumo
+         * 2. Copiamos las variables recibidas.
          */
         analisis.setConsumoKwh(request.getConsumoKwh());
         analisis.setUsoHorarioPico(request.getUsoHorarioPico());
         analisis.setCantidadEquipos(request.getCantidadEquipos());
         analisis.setTipoInmueble(request.getTipoInmueble());
 
-        /*
-         * AnalisisRequest tiene horasAltoConsumo como Integer,
-         * mientras que la entidad AnalisisEnergetico lo tiene
-         * como BigDecimal.
-         * Por eso debemos realizar la conversión.
-         */
         if (request.getHorasAltoConsumo() != null) {
-
             analisis.setHorasAltoConsumo(
-                    java.math.BigDecimal.valueOf(
-                            request.getHorasAltoConsumo()
-                    )
+                    BigDecimal.valueOf(request.getHorasAltoConsumo())
             );
         }
 
         /*
-         * Guardamos la entidad utilizando el repositorio.
+         * 3. Llamamos al servicio Python.
          *
-         * El servicio es quien utiliza el repositorio.
-         * El Controller NO accede directamente a él.
+         * Python ejecuta el modelo de Machine Learning
+         * y devuelve categoría + probabilidad.
+         */
+        PredictionResponse prediction =
+                inferenceClient.predecir(request);
+
+        /*
+         * 4. Guardamos el resultado del modelo.
+         */
+        analisis.setCategoria(prediction.getCategoria());
+        analisis.setProbabilidad(prediction.getProbabilidad());
+
+        /*
+         * 5. Tarifa de referencia del proyecto.
+         */
+        BigDecimal tarifa = new BigDecimal("0.75");
+
+        analisis.setTarifaReferenciaKwh(tarifa);
+
+        /*
+         * 6. Calculamos el costo mensual:
+         *
+         * consumo kWh × tarifa
+         */
+        BigDecimal costo =
+                request.getConsumoKwh()
+                        .multiply(tarifa)
+                        .setScale(2, RoundingMode.HALF_UP);
+
+        analisis.setCostoEstimadoMensual(costo);
+
+        /*
+         * 7. Moneda del proyecto.
+         */
+        analisis.setMoneda("BRL");
+
+        /*
+         * 8. Versión inicial del modelo.
+         */
+        analisis.setVersionModelo("1.0.0");
+
+        /*
+         * 9. Guardamos el análisis completo.
          */
         AnalisisEnergetico analisisGuardado =
                 analisisEnergeticoRepository.save(analisis);
 
         /*
-         * Después de guardar, convertimos la entidad
-         * a AnalisisResponse.
-         *
-         * El controlador recibirá el DTO y no la entidad.
+         * 10. Convertimos a DTO de respuesta.
          */
         return convertirAResponse(analisisGuardado);
     }
 
-
     @Override
     public List<AnalisisResponse> obtenerTodosLosAnalisis() {
 
-        /*
-         * findAll() devuelve:
-         *
-         * List<AnalisisEnergetico>
-         *
-         * Nosotros necesitamos devolver:
-         *
-         * List<AnalisisResponse>
-         *
-         * Por eso convertimos cada entidad mediante
-         * convertirAResponse().
-         */
         return analisisEnergeticoRepository.findAll()
                 .stream()
                 .map(this::convertirAResponse)
                 .toList();
     }
 
-
-    /**
-     * Obtiene un análisis por su ID.
-     **/
     @Override
-
     public AnalisisResponse obtenerAnalisisPorId(UUID id) {
 
-        /*
-         * Buscamos el análisis utilizando el Repository.
-         *
-         * findById() devuelve Optional porque el registro
-         * podría no existir.
-         */
         AnalisisEnergetico analisis =
                 analisisEnergeticoRepository.findById(id)
                         .orElseThrow(() ->
@@ -131,38 +127,14 @@ public class AnalisisServiceImpl implements AnalisisService {
                                 )
                         );
 
-
-        /*
-         * Si existe, convertimos la entidad a DTO
-         * antes de devolverla.
-         */
         return convertirAResponse(analisis);
     }
 
-
-    /**
-     * Convierte una entidad AnalisisEnergetico
-     * en un AnalisisResponse.
-     *
-     * Este método es privado porque solamente lo necesita
-     * esta clase.
-     *
-     * De esta forma evitamos repetir la misma conversión
-     * en registrarAnalisis(), obtenerTodosLosAnalisis()
-     * y obtenerAnalisisPorId().
-     */
     private AnalisisResponse convertirAResponse(
             AnalisisEnergetico analisis) {
 
-        /*
-         * Creamos el DTO que será devuelto al Controller.
-         */
         AnalisisResponse response = new AnalisisResponse();
 
-        /*
-         * Copiamos los campos que AnalisisResponse
-         * actualmente tiene definidos.
-         */
         response.setId(analisis.getId());
         response.setCategoria(analisis.getCategoria());
         response.setProbabilidad(analisis.getProbabilidad());
@@ -173,21 +145,7 @@ public class AnalisisServiceImpl implements AnalisisService {
         response.setFechaAnalisis(analisis.getFechaAnalisis());
 
         /*
-         * AnalisisResponse tiene:
-         *
-         * List<String> recomendaciones
-         *
-         * mientras que la entidad tiene:
-         *
-         * List<Recomendacion>
-         *
-         * Como tu requerimiento solamente pide utilizar
-         * AnalisisRequest y AnalisisResponse, no agregamos
-         * aquí lógica adicional para construir recomendaciones.
-         *
-         * Para mantener el servicio enfocado únicamente
-         * en los requerimientos indicados, dejamos este
-         * campo como null.
+         * Las recomendaciones las implementaremos después.
          */
         response.setRecomendaciones(null);
 

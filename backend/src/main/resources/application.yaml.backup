@@ -15,15 +15,5 @@ spring:
       hibernate:
         format_sql: true
 
-springdoc:
-  swagger-ui:
-    path: /swagger-ui/index.html
-  api-docs:
-    path: /v3/api-docs
-
 server:
   port: ${PORT:8080}
-
-inference:
-  service:
-    url: ${INFERENCE_SERVICE_URL:http://localhost:8000}
