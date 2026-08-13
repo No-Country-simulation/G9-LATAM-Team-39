@@ -3,14 +3,14 @@ spring:
     name: energy-analysis-api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/energiai
-    username: postgres
-    password: cp1av5zs
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -18,8 +18,8 @@ spring:
 springdoc:
   swagger-ui:
     path: /swagger-ui/index.html
-    api-docs:
-        path: /v3/api-docs
+  api-docs:
+    path: /v3/api-docs
 
 server:
-  port: 8080
+  port: ${PORT:8080}
