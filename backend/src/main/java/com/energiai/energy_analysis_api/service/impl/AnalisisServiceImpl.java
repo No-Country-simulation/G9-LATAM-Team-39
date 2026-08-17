@@ -7,10 +7,12 @@ import com.energiai.energy_analysis_api.exception.AnalisisNoEncontradoException;
 import com.energiai.energy_analysis_api.mapper.AnalisisMapper;
 import com.energiai.energy_analysis_api.repository.AnalisisEnergeticoRepository;
 import com.energiai.energy_analysis_api.service.AnalisisService;
+import com.energiai.energy_analysis_api.service.CalculadoraAltoConsumoService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,17 +22,23 @@ public class AnalisisServiceImpl implements AnalisisService {
 
     private final AnalisisEnergeticoRepository repository;
     private final AnalisisMapper mapper;
+    private final CalculadoraAltoConsumoService calculadoraAltoConsumoService;
 
     public AnalisisServiceImpl(
             AnalisisEnergeticoRepository repository,
-            AnalisisMapper mapper
+            AnalisisMapper mapper,
+            CalculadoraAltoConsumoService calculadoraAltoConsumoService
     ) {
         this.repository = repository;
         this.mapper = mapper;
+        this.calculadoraAltoConsumoService =
+                calculadoraAltoConsumoService;
     }
 
     @Override
     public AnalisisResponse crearAnalisis(AnalisisRequest request) {
+
+        calcularHorasAltoConsumo(request);
 
         AnalisisEnergetico analisis =
                 mapper.toEntity(request);
@@ -70,6 +78,8 @@ public class AnalisisServiceImpl implements AnalisisService {
         AnalisisEnergetico analisisExistente =
                 buscarEntidadPorId(id);
 
+        calcularHorasAltoConsumo(request);
+
         mapper.updateEntity(
                 analisisExistente,
                 request
@@ -88,6 +98,31 @@ public class AnalisisServiceImpl implements AnalisisService {
                 buscarEntidadPorId(id);
 
         repository.delete(analisis);
+    }
+
+    /**
+     * Calcula las horas equivalentes de alto consumo
+     * utilizando los equipos enviados por el frontend.
+     */
+    private void calcularHorasAltoConsumo(
+            AnalisisRequest request
+    ) {
+
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "La solicitud de análisis no puede ser nula"
+            );
+        }
+
+        BigDecimal horasCalculadas =
+                calculadoraAltoConsumoService
+                        .calcularHorasAltoConsumo(
+                                request.getEquiposAltoConsumo()
+                        );
+
+        request.setHorasAltoConsumo(
+                horasCalculadas
+        );
     }
 
     private AnalisisEnergetico buscarEntidadPorId(UUID id) {

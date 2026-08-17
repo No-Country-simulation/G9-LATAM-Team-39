@@ -34,6 +34,9 @@ class AnalisisServiceImplTest {
     @Mock
     private AnalisisMapper mapper;
 
+    @Mock
+    private CalculadoraAltoConsumoService calculadoraAltoConsumoService;
+
     @InjectMocks
     private AnalisisServiceImpl service;
 
@@ -52,7 +55,7 @@ class AnalisisServiceImplTest {
         request.setCantidadEquipos(6);
         request.setUsoHorarioPico(true);
         request.setTipoInmueble("Casa");
-        request.setHorasAltoConsumo(BigDecimal.valueOf(5));
+        request.setEquiposAltoConsumo(List.of());
 
         analisis = new AnalisisEnergetico();
         analisis.setId(id);
@@ -60,7 +63,7 @@ class AnalisisServiceImplTest {
         analisis.setCantidadEquipos(6);
         analisis.setUsoHorarioPico(true);
         analisis.setTipoInmueble("Casa");
-        analisis.setHorasAltoConsumo(BigDecimal.valueOf(5));
+        analisis.setHorasAltoConsumo(BigDecimal.ZERO);
         analisis.setCategoria("MEDIO");
         analisis.setProbabilidad(BigDecimal.valueOf(0.85));
         analisis.setCostoEstimadoMensual(BigDecimal.valueOf(120));
@@ -81,6 +84,10 @@ class AnalisisServiceImplTest {
     @Test
     void debeCrearAnalisis() {
 
+        when(calculadoraAltoConsumoService
+                .calcularHorasAltoConsumo(request.getEquiposAltoConsumo()))
+                .thenReturn(BigDecimal.ZERO);
+
         when(mapper.toEntity(request))
                 .thenReturn(analisis);
 
@@ -95,6 +102,12 @@ class AnalisisServiceImplTest {
 
         assertNotNull(resultado);
         assertEquals("MEDIO", resultado.getCategoria());
+        assertEquals(BigDecimal.ZERO, request.getHorasAltoConsumo());
+
+        verify(calculadoraAltoConsumoService, times(1))
+                .calcularHorasAltoConsumo(
+                        request.getEquiposAltoConsumo()
+                );
 
         verify(mapper, times(1))
                 .toEntity(request);
@@ -177,6 +190,10 @@ class AnalisisServiceImplTest {
         when(repository.findById(analisis.getId()))
                 .thenReturn(Optional.of(analisis));
 
+        when(calculadoraAltoConsumoService
+                .calcularHorasAltoConsumo(request.getEquiposAltoConsumo()))
+                .thenReturn(BigDecimal.ZERO);
+
         when(repository.save(analisis))
                 .thenReturn(analisis);
 
@@ -190,9 +207,15 @@ class AnalisisServiceImplTest {
                 );
 
         assertNotNull(resultado);
+        assertEquals(BigDecimal.ZERO, request.getHorasAltoConsumo());
 
         verify(repository, times(1))
                 .findById(analisis.getId());
+
+        verify(calculadoraAltoConsumoService, times(1))
+                .calcularHorasAltoConsumo(
+                        request.getEquiposAltoConsumo()
+                );
 
         verify(mapper, times(1))
                 .updateEntity(analisis, request);

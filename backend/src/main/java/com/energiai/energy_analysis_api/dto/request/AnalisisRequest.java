@@ -1,5 +1,6 @@
 package com.energiai.energy_analysis_api.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -8,6 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class AnalisisRequest {
 
@@ -36,7 +38,22 @@ public class AnalisisRequest {
     )
     private String tipoInmueble;
 
-    @NotNull(message = "Las horas equivalentes de alto consumo son obligatorias")
+    /*
+     * Esta lista será enviada por el frontend.
+     * El usuario seleccionará los equipos de alto consumo
+     * e indicará cuánto los utiliza.
+     */
+    @Valid
+    private List<EquipoAltoConsumoRequest> equiposAltoConsumo;
+
+    /*
+     * Este valor será calculado por el backend.
+     *
+     * horasAltoConsumo =
+     * kWh de equipos de alto consumo / 1.5
+     *
+     * No queremos que el usuario tenga que calcularlo manualmente.
+     */
     @DecimalMin(
             value = "0.0",
             inclusive = true,
@@ -57,12 +74,14 @@ public class AnalisisRequest {
             Boolean usoHorarioPico,
             Integer cantidadEquipos,
             String tipoInmueble,
+            List<EquipoAltoConsumoRequest> equiposAltoConsumo,
             BigDecimal horasAltoConsumo
     ) {
         this.consumoKwh = consumoKwh;
         this.usoHorarioPico = usoHorarioPico;
         this.cantidadEquipos = cantidadEquipos;
         this.tipoInmueble = tipoInmueble;
+        this.equiposAltoConsumo = equiposAltoConsumo;
         this.horasAltoConsumo = horasAltoConsumo;
     }
 
@@ -96,6 +115,16 @@ public class AnalisisRequest {
 
     public void setTipoInmueble(String tipoInmueble) {
         this.tipoInmueble = tipoInmueble;
+    }
+
+    public List<EquipoAltoConsumoRequest> getEquiposAltoConsumo() {
+        return equiposAltoConsumo;
+    }
+
+    public void setEquiposAltoConsumo(
+            List<EquipoAltoConsumoRequest> equiposAltoConsumo
+    ) {
+        this.equiposAltoConsumo = equiposAltoConsumo;
     }
 
     public BigDecimal getHorasAltoConsumo() {

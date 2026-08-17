@@ -33,9 +33,8 @@ public class AnalisisEnergetico {
     @Column(name = "tipo_inmueble", nullable = false, length = 30)
     private String tipoInmueble;
 
-    @Column(name = "horas_alto_consumo", nullable = false, precision = 4, scale = 2)
+    @Column(name = "horas_alto_consumo", nullable = false, precision = 5, scale = 2)
     private BigDecimal horasAltoConsumo;
-
     @Column(nullable = false, length = 20)
     private String categoria;
 
