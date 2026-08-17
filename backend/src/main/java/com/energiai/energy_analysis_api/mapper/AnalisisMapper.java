@@ -24,15 +24,11 @@ public class AnalisisMapper {
         }
 
         return AnalisisEnergetico.builder()
-                .consumoKwh(
-                        BigDecimal.valueOf(request.getConsumoKwh())
-                )
+                .consumoKwh(request.getConsumoKwh())
                 .usoHorarioPico(request.getUsoHorarioPico())
                 .cantidadEquipos(request.getCantidadEquipos())
                 .tipoInmueble(request.getTipoInmueble())
-                .horasAltoConsumo(
-                        BigDecimal.valueOf(request.getHorasAltoConsumo())
-                )
+                .horasAltoConsumo(request.getHorasAltoConsumo())
                 .categoria("PENDIENTE")
                 .probabilidad(BigDecimal.ZERO)
                 .costoEstimadoMensual(BigDecimal.ZERO)
@@ -91,15 +87,11 @@ public class AnalisisMapper {
             );
         }
 
-        entity.setConsumoKwh(
-                BigDecimal.valueOf(request.getConsumoKwh())
-        );
+        entity.setConsumoKwh(request.getConsumoKwh());
         entity.setUsoHorarioPico(request.getUsoHorarioPico());
         entity.setCantidadEquipos(request.getCantidadEquipos());
         entity.setTipoInmueble(request.getTipoInmueble());
-        entity.setHorasAltoConsumo(
-                BigDecimal.valueOf(request.getHorasAltoConsumo())
-        );
+        entity.setHorasAltoConsumo(request.getHorasAltoConsumo());
     }
 
     private String obtenerTextoRecomendacion(

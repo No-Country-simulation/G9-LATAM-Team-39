@@ -48,11 +48,11 @@ class AnalisisServiceImplTest {
         LocalDateTime fecha = LocalDateTime.now();
 
         request = new AnalisisRequest();
-        request.setConsumoKwh(250.0);
+        request.setConsumoKwh(BigDecimal.valueOf(250));
         request.setCantidadEquipos(6);
         request.setUsoHorarioPico(true);
         request.setTipoInmueble("Casa");
-        request.setHorasAltoConsumo(5);
+        request.setHorasAltoConsumo(BigDecimal.valueOf(5));
 
         analisis = new AnalisisEnergetico();
         analisis.setId(id);
