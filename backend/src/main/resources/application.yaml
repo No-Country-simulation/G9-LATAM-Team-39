@@ -23,3 +23,5 @@ springdoc:
 
 server:
   port: 8080
+  inference-service:
+    url: ${INFERENCE_SERVICE_URL:http://localhost:8000}
