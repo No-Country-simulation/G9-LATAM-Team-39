@@ -6,40 +6,27 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
-     * Datos inválidos (Bean Validation)
+     * Maneja los casos donde no existe el análisis solicitado.
      */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidationException(
-            MethodArgumentNotValidException ex) {
+    @ExceptionHandler(AnalisisNoEncontradoException.class)
+    public ResponseEntity<ErrorResponse> manejarAnalisisNoEncontrado(
+            AnalisisNoEncontradoException exception
+    ) {
 
-        String mensaje = ex.getBindingResult()
-                .getFieldError()
-                .getDefaultMessage();
-
-        ApiErrorResponse error = new ApiErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                mensaje
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(error);
-    }
-
-    /**
-     * Recurso no encontrado
-     */
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiErrorResponse> handleNotFound(
-            RuntimeException ex) {
-
-        ApiErrorResponse error = new ApiErrorResponse(
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
                 HttpStatus.NOT_FOUND.value(),
-                ex.getMessage()
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                exception.getMessage(),
+                null
         );
 
         return ResponseEntity
@@ -48,15 +35,72 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Error interno
+     * Maneja errores de validación de los datos recibidos.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> manejarValidaciones(
+            MethodArgumentNotValidException exception
+    ) {
+
+        Map<String, String> errores = new LinkedHashMap<>();
+
+        exception.getBindingResult()
+                .getFieldErrors()
+                .forEach(error ->
+                        errores.put(
+                                error.getField(),
+                                error.getDefaultMessage()
+                        )
+                );
+
+        ErrorResponse respuesta = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "Los datos enviados no son válidos",
+                errores
+        );
+
+        return ResponseEntity
+                .badRequest()
+                .body(respuesta);
+    }
+
+    /**
+     * Maneja argumentos inválidos enviados al backend.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> manejarArgumentoInvalido(
+            IllegalArgumentException exception
+    ) {
+
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                exception.getMessage(),
+                null
+        );
+
+        return ResponseEntity
+                .badRequest()
+                .body(error);
+    }
+
+    /**
+     * Maneja cualquier error inesperado del servidor.
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleGeneralException(
-            Exception ex) {
+    public ResponseEntity<ErrorResponse> manejarErrorGeneral(
+            Exception exception
+    ) {
 
-        ApiErrorResponse error = new ApiErrorResponse(
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Ha ocurrido un error interno en el servidor."
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                "Ocurrió un error interno en el servidor",
+                null
         );
 
         return ResponseEntity

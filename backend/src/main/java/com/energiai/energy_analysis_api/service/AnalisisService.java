@@ -21,23 +21,36 @@ public interface AnalisisService {
      * @param request datos recibidos para crear el análisis
      * @return información del análisis registrado
      */
-    AnalisisResponse registrarAnalisis(AnalisisRequest request);
+    AnalisisResponse crearAnalisis(AnalisisRequest request);
 
     /**
      * Obtiene todos los análisis energéticos registrados.
      *
-     * @return lista de análisis convertidos a DTOs
+     * @return lista de análisis
      */
-    List<AnalisisResponse> obtenerTodosLosAnalisis();
+    List<AnalisisResponse> obtenerTodos();
 
     /**
-     * Busca un análisis energético por su identificador.
+     * Obtiene un análisis energético por su identificador UUID.
      *
-     * En este proyecto el ID de AnalisisEnergetico es UUID,
-     * por eso el parámetro debe ser UUID y no Long.
-     *
-     * @param id identificador del análisis
-     * @return análisis encontrado convertido a DTO
+     * @param id identificador UUID del análisis
+     * @return análisis encontrado
      */
-    AnalisisResponse obtenerAnalisisPorId(UUID id);
+    AnalisisResponse obtenerPorId(UUID id);
+
+    /**
+     * Actualiza los datos de entrada de un análisis existente.
+     *
+     * @param id identificador UUID del análisis
+     * @param request nuevos datos del análisis
+     * @return análisis actualizado
+     */
+    AnalisisResponse actualizar(UUID id, AnalisisRequest request);
+
+    /**
+     * Elimina un análisis energético.
+     *
+     * @param id identificador UUID del análisis
+     */
+    void eliminar(UUID id);
 }

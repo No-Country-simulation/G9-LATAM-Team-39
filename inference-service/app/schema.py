@@ -21,11 +21,37 @@ class PredictRequest(BaseModel):
 
     El backend solo envia estas cinco. Nunca manda 'equipos', costo ni nada mas.
     """
-    consumo_kwh: float = Field(..., gt=0, le=2000, description="Consumo mensual en kWh")
-    uso_horario_pico: bool = Field(..., description="Usa equipos en horario pico")
-    cantidad_equipos: int = Field(..., ge=1, le=60, description="Numero de equipos")
-    tipo_inmueble: TipoInmueble = Field(..., description="Casa | Departamento | Otro")
-    horas_alto_consumo: float = Field(..., ge=0, le=24, description="Horas de alto consumo")
+
+    consumo_kwh: float = Field(
+        ...,
+        gt=0,
+        le=2000,
+        description="Consumo mensual en kWh"
+    )
+
+    uso_horario_pico: bool = Field(
+        ...,
+        description="Usa equipos en horario pico"
+    )
+
+    cantidad_equipos: int = Field(
+        ...,
+        ge=1,
+        le=60,
+        description="Numero de equipos"
+    )
+
+    tipo_inmueble: TipoInmueble = Field(
+        ...,
+        description="Casa | Departamento | Otro"
+    )
+
+    horas_alto_consumo: float = Field(
+        ...,
+        ge=0,
+        le=200,
+        description="Horas equivalentes de alto consumo"
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -34,7 +60,7 @@ class PredictRequest(BaseModel):
                 "uso_horario_pico": True,
                 "cantidad_equipos": 10,
                 "tipo_inmueble": "Casa",
-                "horas_alto_consumo": 8,
+                "horas_alto_consumo": 80,
             }
         }
     }
@@ -45,5 +71,15 @@ class PredictResponse(BaseModel):
 
     El costo, la moneda y las recomendaciones los agrega el backend, no aqui.
     """
-    categoria: str = Field(..., description="EFICIENTE | MODERADO | INEFICIENTE")
-    probabilidad: float = Field(..., ge=0, le=1, description="Confianza de la prediccion")
+
+    categoria: str = Field(
+        ...,
+        description="EFICIENTE | MODERADO | INEFICIENTE"
+    )
+
+    probabilidad: float = Field(
+        ...,
+        ge=0,
+        le=1,
+        description="Confianza de la prediccion"
+    )
