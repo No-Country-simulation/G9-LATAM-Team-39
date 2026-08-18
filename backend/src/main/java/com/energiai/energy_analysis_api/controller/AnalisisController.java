@@ -13,12 +13,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@CrossOrigin(origins = "https://proyecto-self-five.vercel.app")
+@RestController
+@RequestMapping("/api/analisis")
 @Tag(
         name = "Análisis Energético",
         description = "Endpoints para registrar, consultar, actualizar y eliminar análisis energéticos"
 )
-@RestController
-@RequestMapping("/api/analisis")
 public class AnalisisController {
 
     private final AnalisisService analisisService;
@@ -49,7 +50,6 @@ public class AnalisisController {
     )
     @GetMapping
     public ResponseEntity<List<AnalisisResponse>> obtenerTodos() {
-
         return ResponseEntity.ok(
                 analisisService.obtenerTodos()
         );
@@ -63,7 +63,6 @@ public class AnalisisController {
     public ResponseEntity<AnalisisResponse> obtenerPorId(
             @PathVariable UUID id
     ) {
-
         return ResponseEntity.ok(
                 analisisService.obtenerPorId(id)
         );
@@ -78,7 +77,6 @@ public class AnalisisController {
             @PathVariable UUID id,
             @Valid @RequestBody AnalisisRequest request
     ) {
-
         return ResponseEntity.ok(
                 analisisService.actualizar(id, request)
         );
@@ -92,11 +90,8 @@ public class AnalisisController {
     public ResponseEntity<Void> eliminar(
             @PathVariable UUID id
     ) {
-
         analisisService.eliminar(id);
 
-        return ResponseEntity
-                .noContent()
-                .build();
+        return ResponseEntity.noContent().build();
     }
 }
