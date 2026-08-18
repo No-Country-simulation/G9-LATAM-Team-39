@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EnergiAI — Análisis de consumo energético</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="wrap">
+
+    <header>
+      <div class="brand"><span class="dot"></span> EnergiAI</div>
+      <h1>¿Qué tan <span class="accent">eficiente</span> es tu hogar?</h1>
+      <p class="sub">Cuéntanos cómo consumes electricidad y te decimos tu perfil energético, el costo estimado y cómo gastar menos.</p>
+    </header>
+
+    <!-- FORMULARIO -->
+    <div class="card">
+      <h2>Datos de tu vivienda</h2>
+
+      <div class="grid">
+        <div>
+          <label for="consumo">Consumo mensual (kWh)</label>
+          <input type="number" id="consumo" min="1" step="0.1" placeholder="Ej. 200" value="200">
+          <div class="hint">Lo encuentras en tu recibo de luz.</div>
+        </div>
+        <div>
+          <label for="tipo">Tipo de vivienda</label>
+          <select id="tipo">
+            <option value="Casa">Casa</option>
+            <option value="Departamento">Departamento</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:16px">
+        <div>
+          <label for="cantidad">Cantidad de equipos</label>
+          <input type="number" id="cantidad" min="1" step="1" placeholder="Ej. 8" value="8">
+          <div class="hint">Total de aparatos eléctricos en casa.</div>
+        </div>
+        <div>
+          <label>¿Usas aparatos en horario pico? (6–10 pm)</label>
+          <div class="toggle-row" id="pico">
+            <div class="opt active" data-val="true">Sí</div>
+            <div class="opt" data-val="false">No</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:22px">
+        <label>Equipos de alto consumo que usas</label>
+        <div class="hint" style="margin-bottom:12px">Marca los que tengas e indica cuánto los usas. Con esto estimamos tu consumo intensivo.</div>
+        <div class="equipos" id="equipos"></div>
+      </div>
+
+      <button class="btn" id="analizar">Analizar mi consumo</button>
+      <div class="error-box" id="error"></div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="card" id="resultado">
+      <h2>Tu resultado</h2>
+      <div class="verdict">
+        <span class="cat" id="r-cat">—</span>
+        <span class="prob" id="r-prob"></span>
+      </div>
+      <div class="stat-row">
+        <div class="stat">
+          <div class="k">Costo mensual estimado</div>
+          <div class="v" id="r-costo">—</div>
+        </div>
+        <div class="stat">
+          <div class="k">Análisis</div>
+          <div class="v" id="r-fecha" style="font-size:15px;font-weight:500">—</div>
+        </div>
+      </div>
+      <div>
+        <div class="k reco-title">Recomendaciones</div>
+        <ul class="recos" id="r-recos"></ul>
+      </div>
+    </div>
+
+    <p class="foot">EnergiAI · Hackathon ONE · Modelo servido desde OCI</p>
+  </div>
+
+  <!-- Scripts: como módulos ES. El orden lo maneja el propio import. -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

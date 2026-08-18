@@ -1,73 +1,112 @@
-# Frontend
+# Frontend — EnergiAI
 
-> **Módulo opcional.** La descripción del proyecto indica que el front-end **no es obligatorio para el MVP**. No debe bloquear la ruta crítica (dataset → modelo → API → OCI). Solo se aborda cuando el flujo vertical ya funciona.
+Interfaz web del Analizador Inteligente de Consumo Energético. El usuario captura
+los datos de su vivienda, y la app muestra su perfil energético (Eficiente /
+Moderado / Ineficiente), el costo mensual estimado y recomendaciones.
 
-Interfaz de usuario del Analizador Inteligente de Consumo Energético: captura los datos de consumo y muestra el resultado que devuelve el backend.
+> Contrato de la API: ver `../docs/contrato-api.md` (única versión válida).
+> Este README es operativo.
 
-> Contrato de la API: ver `../docs/contrato-api.md` (única versión válida). Tabla de consumo por aparato: `../docs/consumo-por-aparato.md`. Este README es operativo.
+## Estructura
 
-> Reparto por frentes: ver "Frentes de trabajo" en la documentación de No Country.
+```
+frontend/
+├── index.html          # estructura (HTML)
+├── css/
+│   └── styles.css      # estilos
+└── js/
+    ├── config.js       # configuración: URL del backend y catálogo de equipos
+    ├── api.js          # capa de comunicación con el backend (fetch)
+    ├── ui.js           # manejo del DOM: formulario y resultados
+    └── main.js         # punto de entrada; orquesta ui + api
+```
 
----
+Separación por responsabilidades: `api.js` es lo único que habla con el backend;
+`ui.js` es lo único que toca el DOM; `main.js` los conecta. Si cambia el backend,
+se toca `api.js`/`config.js`; si cambia el diseño, `ui.js`/`css`.
 
-## Alcance mínimo (si se hace)
+## Cómo correr en local
 
-- Formulario con las 5 variables de entrada.
-- **Lista multiseleccionable de aparatos** (ver abajo, es parte del alcance).
-- Enviar `POST /analisis-energetico` al backend.
-- Mostrar estados de carga y errores.
-- Presentar categoría, probabilidad, costo estimado, moneda y recomendaciones.
+Usa módulos ES (`import`/`export`), así que **no se abre con doble clic**
+(el navegador bloquea módulos vía `file://`). Hay que servirlo por HTTP:
+
+```bash
+# desde la carpeta frontend/
+python3 -m http.server 5500
+```
+
+Luego abrir `http://localhost:5500`. Alternativas: extensión **Live Server** de
+VS Code, o `npx serve`.
 
 ## El formulario
 
-| Campo | Control | Notas |
+| Campo | Control | Envía como |
 |---|---|---|
-| `consumo_kwh` | número | Ver "si el usuario no lo sabe" |
-| `uso_horario_pico` | sí / no | |
-| `cantidad_equipos` | número | Se puede llenar solo, contando los aparatos seleccionados |
-| `tipo_inmueble` | selector | Exactamente 3 opciones: `Casa`, `Departamento`, `Otro` |
-| `horas_alto_consumo` | número | Horas diarias de equipos de alto consumo |
-| `equipos` | multiselección | **Opcional**, se envía tal cual a la API |
+| Consumo mensual (kWh) | número | `consumoKwh` |
+| ¿Uso en horario pico? | sí / no | `usoHorarioPico` |
+| Cantidad de equipos | número | `cantidadEquipos` |
+| Tipo de vivienda | selector (Casa / Departamento / Otro) | `tipoInmueble` |
+| Equipos de alto consumo | multiselección con horas/día y días/mes | `equiposAltoConsumo` |
 
-Catálogo de `equipos`: `aire_acondicionado`, `calentador_electrico`, `refrigerador`, `calefactor`, `focos`, `pantalla`, `lavadora`, `plancha`, `ventilador`, `bomba_agua`, `otros`.
+**El usuario ingresa su consumo directamente** (lo encuentra en su recibo de luz).
+No se estima desde los aparatos: se pide tal cual.
 
----
+**`horasAltoConsumo` no se envía desde el frontend**: lo calcula el backend a
+partir de la lista de equipos de alto consumo (potencia x horas x dias / 1.5).
 
-## Responsabilidad propia: estimar el consumo
+### Catálogo de equipos de alto consumo
 
-**Esta parte la hace el frontend, no el backend** (ver `../docs/decisiones.md`, D10). La mayoría de las personas no conoce sus kWh: conoce cuánto paga.
+Los códigos coinciden con el enum `EquipoAltoConsumo` del backend
+(`../backend/.../catalog/`). Están definidos en `js/config.js`:
 
-El formulario ofrece dos caminos y **siempre envía `consumo_kwh` ya resuelto**:
+`AIRE_ACONDICIONADO`, `CALENTADOR_ELECTRICO`, `HORNO_ELECTRICO`, `SECADORA_ROPA`,
+`PARRILLA_ELECTRICA`, `LAVAVAJILLAS`, `BOMBA_AGUA`, `CALEFACTOR_ELECTRICO`.
 
-- **"Sí conozco mi consumo"** → el usuario lo escribe. Este dato manda siempre.
-- **"No lo sé"** → selecciona sus aparatos y el frontend estima:
+Si el backend cambia el catálogo, actualizar `CATALOGO_EQUIPOS` en `config.js`.
 
+## Conexión con el backend
+
+El frontend llama a `POST /analisis-energetico` con este cuerpo (AnalisisRequest):
+
+```json
+{
+  "consumoKwh": 200,
+  "usoHorarioPico": true,
+  "cantidadEquipos": 8,
+  "tipoInmueble": "Casa",
+  "equiposAltoConsumo": [
+    { "codigoEquipo": "AIRE_ACONDICIONADO", "horasUsoDia": 4, "diasUsoMes": 20 }
+  ]
+}
 ```
-consumo_estimado = Σ (kWh_del_aparato × cantidad_seleccionada)
+
+La respuesta (AnalisisResponse) trae `categoria`, `probabilidad`,
+`costoEstimadoMensual`, `moneda`, `fechaAnalisis` y `recomendaciones`.
+
+El frontend maneja los estados de carga y muestra los errores del backend.
+
+## Configuración
+
+En `js/config.js`:
+
+- **`BASE_URL`**: la URL del backend.
+  - Local: `http://localhost:8080`
+  - Producción: la URL del backend en Render.
+- **`ENDPOINTS.analisis`**: la ruta del endpoint (`/analisis-energetico`).
+- **`CATALOGO_EQUIPOS`**: los equipos de alto consumo (ver arriba).
+
+## CORS
+
+El backend debe permitir las peticiones del frontend. En el controller Java:
+
+```java
+@CrossOrigin(origins = "*")   // en producción, restringir al dominio del frontend
 ```
 
-Los valores por aparato están en `../docs/consumo-por-aparato.md`.
+Sin esto, el navegador bloquea las llamadas y la app no conecta.
 
-**Excepción — `focos`:** su valor (16.9) corresponde a **todo el hogar**, no a un foco. Siempre se suma ×1, sin importar cuántos declare el usuario.
+## Despliegue (Vercel)
 
-**Si elige "no lo sé" y no selecciona ningún aparato:** el formulario no deja continuar. Pide el consumo o al menos un aparato. No se inventa un valor por defecto.
-
-> **Por qué aquí y no en el backend:** `consumo_kwh` es obligatorio en el contrato del MVP. Poniendo la estimación en el frontend, el contrato queda intacto y el backend no cambia. Como efecto secundario, quien llame la API directamente (Postman, Swagger) debe conocer su consumo: la estimación es una comodidad de la interfaz, no una función de la API.
-
----
-
-## Stack sugerido (elegir lo más rápido)
-
-- Opción A: HTML + JS plano (`fetch` al backend). Cero build, ideal para la demo.
-- Opción B: Streamlit (Python), si el dueño viene de Data Science.
-- Opción C: framework JS (React/Vite), solo si hay tiempo de sobra.
-
-## Variables
-
-| Variable | Descripción |
-|---|---|
-| `API_BASE_URL` | URL del backend |
-
-## Estado
-
-La tecnología o framework del frontend todavía no ha sido definido. Se decidirá solo si hay capacidad tras cerrar el MVP.
+Al ser estático, se despliega directo: conectar el repo a Vercel con la carpeta
+`frontend/` como raíz del proyecto. Antes de desplegar, cambiar `BASE_URL` en
+`config.js` por la URL del backend en producción.
