@@ -31,3 +31,35 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Python ###
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+### Credenciales y variables de entorno (NUNCA subir) ###
+.env
+*.env
+!.env.example
+*.pem
+*.key
+.oci/
+
+### Datos crudos (pesados, no van al repo) ###
+data-science/data/raw/
+data-science/models/reporte_metricas.json
+data-science/notebooks/EnergiAI_EDA_Modelado.ipynb
+
+### Modelos (viven en OCI; opcional en repo para pruebas) ###
+# Descomenta si NO quieres subir el modelo al repo:
+# data-science/models/*.joblib
+
+### Sistema ###
+.DS_Store
+Thumbs.db
