@@ -31,18 +31,26 @@ public class RecomendacionService {
 
         switch (categoria) {
 
-            case "EFICIENTE" -> generarEficiente(analisis);
+            case "EFICIENTE":
+                generarEficiente(analisis);
+                break;
 
-            case "MODERADO" -> generarModerado(analisis);
+            case "MODERADO":
+                generarModerado(analisis);
+                break;
 
-            case "INEFICIENTE" -> generarIneficiente(analisis);
+            case "INEFICIENTE":
+                generarIneficiente(analisis);
+                break;
 
-            default -> agregar(
-                    analisis,
-                    "Continúa monitoreando tu consumo energético para identificar oportunidades de ahorro.",
-                    "MEDIA",
-                    1
-            );
+            default:
+                agregar(
+                        analisis,
+                        "Continúa monitoreando tu consumo energético para identificar oportunidades de ahorro.",
+                        "MEDIA",
+                        1
+                );
+                break;
         }
     }
 

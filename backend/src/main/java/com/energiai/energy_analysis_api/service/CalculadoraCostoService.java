@@ -10,15 +10,22 @@ import java.math.RoundingMode;
 public class CalculadoraCostoService {
 
     private final BigDecimal tarifaReferenciaKwh;
+    private final String moneda;
 
     public CalculadoraCostoService(
-            @Value("${energiai.tarifa-referencia-kwh:1.00}")
-            BigDecimal tarifaReferenciaKwh
+            @Value("${energiai.tarifa-referencia-kwh:0.75}")
+            BigDecimal tarifaReferenciaKwh,
+
+            @Value("${energiai.moneda:BRL}")
+            String moneda
     ) {
         this.tarifaReferenciaKwh = tarifaReferenciaKwh;
+        this.moneda = moneda;
     }
 
-    public BigDecimal calcularCostoMensual(BigDecimal consumoKwh) {
+    public BigDecimal calcularCostoMensual(
+            BigDecimal consumoKwh
+    ) {
 
         if (consumoKwh == null) {
             throw new IllegalArgumentException(
@@ -34,10 +41,17 @@ public class CalculadoraCostoService {
 
         return consumoKwh
                 .multiply(tarifaReferenciaKwh)
-                .setScale(2, RoundingMode.HALF_UP);
+                .setScale(
+                        2,
+                        RoundingMode.HALF_UP
+                );
     }
 
     public BigDecimal obtenerTarifaReferenciaKwh() {
         return tarifaReferenciaKwh;
+    }
+
+    public String obtenerMoneda() {
+        return moneda;
     }
 }

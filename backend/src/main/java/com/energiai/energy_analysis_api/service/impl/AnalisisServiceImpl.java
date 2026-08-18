@@ -110,7 +110,9 @@ public class AnalisisServiceImpl implements AnalisisService {
                         .obtenerTarifaReferenciaKwh()
         );
 
-        analisis.setMoneda("MXN");
+        analisis.setMoneda(
+                calculadoraCostoService.obtenerMoneda()
+        );
 
         /*
          * 6. Generamos recomendaciones según
@@ -213,7 +215,9 @@ public class AnalisisServiceImpl implements AnalisisService {
                         .obtenerTarifaReferenciaKwh()
         );
 
-        analisisExistente.setMoneda("MXN");
+        analisisExistente.setMoneda(
+                calculadoraCostoService.obtenerMoneda()
+        );
 
         /*
          * 6. Eliminamos las recomendaciones anteriores.

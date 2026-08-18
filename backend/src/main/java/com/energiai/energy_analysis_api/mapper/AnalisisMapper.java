@@ -33,7 +33,7 @@ public class AnalisisMapper {
                 .probabilidad(BigDecimal.ZERO)
                 .costoEstimadoMensual(BigDecimal.ZERO)
                 .tarifaReferenciaKwh(BigDecimal.ZERO)
-                .moneda("MXN")
+                .moneda("BRL")
                 .versionModelo(null)
                 .build();
     }

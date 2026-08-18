@@ -18,10 +18,15 @@ spring:
 springdoc:
   swagger-ui:
     path: /swagger-ui/index.html
-    api-docs:
-        path: /v3/api-docs
+  api-docs:
+    path: /v3/api-docs
 
 server:
   port: 8080
-  inference-service:
-    url: ${INFERENCE_SERVICE_URL:http://localhost:8000}
+
+inference-service:
+  url: ${INFERENCE_SERVICE_URL:http://localhost:8000}
+
+energiai:
+  tarifa-referencia-kwh: ${TARIFA_REFERENCIA_KWH:0.75}
+  moneda: ${ENERGIAI_MONEDA:BRL}
