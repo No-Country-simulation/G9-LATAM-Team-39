@@ -3,14 +3,14 @@ spring:
     name: energy-analysis-api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/energiai
-    username: postgres
-    password: ${DB_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -22,11 +22,8 @@ springdoc:
     path: /v3/api-docs
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
-inference-service:
-  url: ${INFERENCE_SERVICE_URL:http://localhost:8000}
-
-energiai:
-  tarifa-referencia-kwh: ${TARIFA_REFERENCIA_KWH:0.75}
-  moneda: ${ENERGIAI_MONEDA:BRL}
+inference:
+  service:
+    url: ${INFERENCE_SERVICE_URL:http://localhost:8000}
