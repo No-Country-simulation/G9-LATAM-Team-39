@@ -18,7 +18,7 @@ import java.util.UUID;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/analisis")
+@RequestMapping("/analisis-energetico")
 @Tag(
         name = "Análisis Energético",
         description = "Endpoints para registrar, consultar, actualizar y eliminar análisis energéticos"
