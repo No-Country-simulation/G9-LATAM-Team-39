@@ -61,7 +61,7 @@ public class AnalisisRequest {
     )
 
     @DecimalMax(
-            value = "10000.0",
+            value = "2000.0",
             inclusive = true,
             message = "El consumo mensual supera el máximo permitido"
     )
