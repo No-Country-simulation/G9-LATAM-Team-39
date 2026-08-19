@@ -72,6 +72,7 @@ public class CalculadoraAltoConsumoService {
          * horasAltoConsumo =
          * total kWh alto consumo / 1.5 kW
          */
+
         BigDecimal horasAltoConsumo =
                 totalKwh.divide(
                         CARGA_REFERENCIA_KW,
@@ -80,16 +81,11 @@ public class CalculadoraAltoConsumoService {
                 );
 
         /*
-         * El contrato actual del modelo acepta [0, 200].
+         * El contrato del modelo acepta [0, 200    ].
+         * Si supera 200, se capa al máximo en vez de rechazar.
          */
-        if (horasAltoConsumo.compareTo(
-                LIMITE_HORAS_ALTO_CONSUMO
-        ) > 0) {
-
-            throw new IllegalArgumentException(
-                    "Las horas equivalentes de alto consumo "
-                            + "superan el límite permitido de 200"
-            );
+        if (horasAltoConsumo.compareTo(LIMITE_HORAS_ALTO_CONSUMO) > 0) {
+            horasAltoConsumo = LIMITE_HORAS_ALTO_CONSUMO;
         }
 
         return horasAltoConsumo;

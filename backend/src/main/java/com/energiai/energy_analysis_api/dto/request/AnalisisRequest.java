@@ -59,11 +59,13 @@ public class AnalisisRequest {
             inclusive = true,
             message = "Las horas equivalentes de alto consumo no pueden ser negativas"
     )
-    @DecimalMax(
+
+    /*@DecimalMax(
             value = "200.0",
             inclusive = true,
             message = "Las horas equivalentes de alto consumo no pueden superar 200"
-    )
+    )*/
+
     private BigDecimal horasAltoConsumo;
 
     public AnalisisRequest() {
