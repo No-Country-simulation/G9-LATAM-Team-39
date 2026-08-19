@@ -75,7 +75,7 @@ export function leerFormulario() {
   const tipo = el.tipo().value;
 
   if (!consumo || consumo <= 0) throw new Error("Ingresa un consumo válido (mayor que cero).");
-  if (consumo > 10000) throw new Error("El consumo mensual parece demasiado alto. Verifica el valor (un hogar típico usa entre 100 y 500 kWh).");
+  if (consumo > 2000) throw new Error("El consumo mensual parece demasiado alto. Verifica el valor (un hogar típico usa entre 100 y 500 kWh; el máximo aceptado es 2000).");
   if (!cantidad || cantidad < 1) throw new Error("La cantidad de equipos debe ser al menos 1.");
 
   const equiposAltoConsumo = [];
