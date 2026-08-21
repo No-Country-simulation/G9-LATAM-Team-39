@@ -19,6 +19,10 @@ public class AnalisisRequest {
             inclusive = false,
             message = "El consumo debe ser mayor que cero"
     )
+    @DecimalMax(
+        value = "2000.0",
+        message = "El consumo mensual no puede superar 2000 kWh"
+    )
     private BigDecimal consumoKwh;
 
     @NotNull(message = "El uso en horario pico es obligatorio")
@@ -59,11 +63,12 @@ public class AnalisisRequest {
             inclusive = true,
             message = "Las horas equivalentes de alto consumo no pueden ser negativas"
     )
-    @DecimalMax(
-            value = "200.0",
+    
+   /* @DecimalMax(
+            value = "2000.0",
             inclusive = true,
             message = "Las horas equivalentes de alto consumo no pueden superar 200"
-    )
+    ) */
     private BigDecimal horasAltoConsumo;
 
     public AnalisisRequest() {

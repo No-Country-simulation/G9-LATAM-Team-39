@@ -17,8 +17,9 @@ import java.util.UUID;
         name = "Análisis Energético",
         description = "Endpoints para registrar, consultar, actualizar y eliminar análisis energéticos"
 )
+@CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/analisis")
+@RequestMapping("/analisis-energetico")
 public class AnalisisController {
 
     private final AnalisisService analisisService;
