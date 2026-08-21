@@ -13,9 +13,12 @@ const el = {
   tipo:     () => document.getElementById("tipo"),
   equipos:  () => document.getElementById("equipos"),
   pico:     () => document.querySelectorAll("#pico .opt"),
-  error:    () => document.getElementById("error"),
   btn:      () => document.getElementById("analizar"),
-  resultado:() => document.getElementById("resultado"),
+  // Modal y sus vistas
+  modal:       () => document.getElementById("modal"),
+  viewLoading: () => document.getElementById("viewLoading"),
+  viewResult:  () => document.getElementById("viewResult"),
+  viewError:   () => document.getElementById("viewError"),
 };
 
 let usoPico = true; // estado del toggle de horario pico
@@ -66,17 +69,33 @@ export function activarTogglePico() {
 }
 
 /**
+ * Impide teclear punto o coma en el campo de cantidad de equipos,
+ * para que solo se puedan ingresar números enteros.
+ */
+export function bloquearDecimalesCantidad() {
+  const input = el.cantidad();
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "." || e.key === ",") {
+      e.preventDefault();
+    }
+  });
+}
+
+/**
  * Lee el formulario y devuelve el cuerpo listo para el backend (AnalisisRequest).
  * Lanza Error con mensaje claro si algún dato es inválido.
  */
 export function leerFormulario() {
   const consumo = parseFloat(el.consumo().value);
-  const cantidad = parseInt(el.cantidad().value, 10);
+  const cantidadRaw = el.cantidad().value;       // valor crudo, para detectar decimales
+  const cantidad = parseInt(cantidadRaw, 10);
   const tipo = el.tipo().value;
 
   if (!consumo || consumo <= 0) throw new Error("Ingresa un consumo válido (mayor que cero).");
   if (consumo > 2000) throw new Error("El consumo mensual parece demasiado alto. Verifica el valor (un hogar típico usa entre 100 y 500 kWh; el máximo aceptado es 2000).");
   if (!cantidad || cantidad < 1) throw new Error("La cantidad de equipos debe ser al menos 1.");
+  if (cantidad > 50) throw new Error("La cantidad de equipos no puede superar 50.");
+  if (cantidadRaw.includes(".") || cantidadRaw.includes(",")) throw new Error("La cantidad de equipos debe ser un número entero (sin decimales).");
 
   const equiposAltoConsumo = [];
   document.querySelectorAll(".equipo").forEach((div) => {
@@ -101,9 +120,33 @@ export function leerFormulario() {
 }
 
 /**
- * Pinta el resultado (AnalisisResponse) en la tarjeta de resultado.
+ * Muestra solo una de las tres vistas dentro del modal.
  */
-export function mostrarResultado(data) {
+function mostrarVista(cual) {
+  el.viewLoading().hidden = cual !== "loading";
+  el.viewResult().hidden  = cual !== "result";
+  el.viewError().hidden   = cual !== "error";
+}
+
+/** Abre el modal. */
+function abrirModal() {
+  el.modal().hidden = false;
+  document.body.style.overflow = "hidden"; // evita scroll de fondo
+}
+
+/** Cierra el modal. */
+export function cerrarModal() {
+  el.modal().hidden = true;
+  document.body.style.overflow = "";
+}
+
+/**
+ * Pinta el resultado (AnalisisResponse) dentro del modal.
+ */
+export function mostrarResultado(data, titulo = "Tu resultado", mostrarCodigo = true) {
+  const tagEl = document.getElementById("resultTag");
+  if (tagEl) tagEl.textContent = titulo;
+
   const cat = (data.categoria || "").toString();
   const catEl = document.getElementById("r-cat");
   catEl.textContent = cat || "—";
@@ -134,24 +177,88 @@ export function mostrarResultado(data) {
     ul.appendChild(li);
   });
 
-  const res = el.resultado();
-  res.classList.add("show");
-  res.scrollIntoView({ behavior: "smooth", block: "start" });
+  // El código (id) solo se muestra al ANALIZAR (para guardarlo).
+  // Al CONSULTAR, el usuario ya tiene el código, así que se oculta.
+  const idBox = document.getElementById("idBox");
+  if (idBox) idBox.hidden = !mostrarCodigo;
+  if (mostrarCodigo) {
+    const idEl = document.getElementById("r-id");
+    if (idEl) idEl.textContent = data.id || "—";
+  }
+
+  mostrarVista("result");
 }
 
-// --- Estado del botón y errores ---
+/**
+ * Muestra un mensaje de error dentro del modal.
+ */
 export function mostrarError(msg) {
-  const box = el.error();
-  box.textContent = msg;
-  box.classList.add("show");
+  document.getElementById("errorMsg").textContent = msg;
+  abrirModal();
+  mostrarVista("error");
 }
-export function limpiarError() {
-  el.error().classList.remove("show");
+
+/**
+ * Controla el estado de carga: abre el modal con el spinner.
+ * @param {boolean} cargando
+ * @param {Object} [opciones] - textos personalizados del spinner:
+ *   { titulo, subtitulo }. Si no se pasan, usa los de "analizar".
+ */
+export function setCargando(cargando, opciones = {}) {
+  if (cargando) {
+    const titulo = opciones.titulo || "Analizando tu consumo…";
+    const subtitulo = opciones.subtitulo || "Nuestro modelo está evaluando tu perfil energético.";
+    const tEl = document.getElementById("loadingText");
+    const sEl = document.getElementById("loadingSub");
+    if (tEl) tEl.textContent = titulo;
+    if (sEl) sEl.textContent = subtitulo;
+    abrirModal();
+    mostrarVista("loading");
+  }
 }
-export function setCargando(cargando) {
-  const b = el.btn();
-  b.disabled = cargando;
-  b.textContent = cargando ? "Analizando…" : "Analizar mi consumo";
+
+/**
+ * Conecta los botones de cierre del modal (X, "Entendido", "Cerrar",
+ * y clic en el fondo oscuro).
+ */
+export function activarModal() {
+  document.getElementById("modalClose").addEventListener("click", cerrarModal);
+  document.getElementById("modalDone").addEventListener("click", cerrarModal);
+  document.getElementById("errorClose").addEventListener("click", cerrarModal);
+  // Clic en el fondo oscuro (fuera del recuadro) cierra el modal.
+  el.modal().addEventListener("click", (e) => {
+    if (e.target === el.modal()) cerrarModal();
+  });
+  // Tecla Escape cierra el modal.
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !el.modal().hidden) cerrarModal();
+  });
+
+  // Botón "Copiar" el código del análisis.
+  const btnCopiar = document.getElementById("copiarId");
+  if (btnCopiar) {
+    btnCopiar.addEventListener("click", async () => {
+      const id = document.getElementById("r-id").textContent.trim();
+      if (!id || id === "—") return;
+      try {
+        await navigator.clipboard.writeText(id);
+      } catch (_) {
+        // Respaldo si el navegador bloquea el portapapeles.
+        const tmp = document.createElement("textarea");
+        tmp.value = id;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand("copy");
+        document.body.removeChild(tmp);
+      }
+      btnCopiar.textContent = "Copiado ✓";
+      btnCopiar.classList.add("copiado");
+      setTimeout(() => {
+        btnCopiar.textContent = "Copiar";
+        btnCopiar.classList.remove("copiado");
+      }, 1800);
+    });
+  }
 }
 
 // Exponer el botón para que main.js le enganche el evento.

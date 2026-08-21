@@ -3,29 +3,158 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EnergiAI — Análisis de consumo energético</title>
+  <title>EnergiAI — Analiza el consumo eléctrico de tu hogar</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+
+<!-- ================= LANDING ================= -->
+<div id="landing">
+
+  <!-- Barra superior -->
+  <nav class="nav">
+    <div class="nav-brand"><span class="dot"></span> EnergiAI</div>
+    <div class="nav-links">
+      <button class="nav-link" data-goto-consulta>Consultar análisis</button>
+      <button class="nav-cta" data-goto-form>Analizar mi consumo</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Análisis de eficiencia energética</p>
+      <h1 class="hero-title">
+        Tu recibo de luz<br>
+        te está diciendo algo.<br>
+        <span class="accent">Nosotros lo traducimos.</span>
+      </h1>
+      <p class="hero-sub">
+        EnergiAI analiza cómo consumes electricidad en casa y te dice si tu hogar
+        es eficiente, cuánto estás gastando de más y qué cambiar para pagar menos.
+      </p>
+      <div class="hero-actions">
+        <button class="btn-primary" data-goto-form>Analizar mi consumo</button>
+        <a class="btn-ghost" href="#como-funciona">Cómo funciona</a>
+      </div>
+    </div>
+
+    <!-- Signature: medidor que simula el modelo analizando -->
+    <div class="meter" id="meter">
+      <div class="meter-top">
+        <span class="meter-label">Perfil energético</span>
+        <span class="meter-status" id="meterStatus">
+          <span class="meter-pulse"></span> Analizando
+        </span>
+      </div>
+      <div class="meter-scan"></div>
+      <div class="meter-readout">
+        <span class="meter-seg" data-seg="0">EFICIENTE</span>
+        <span class="meter-seg" data-seg="1">MODERADO</span>
+        <span class="meter-seg" data-seg="2">INEFICIENTE</span>
+      </div>
+      <div class="meter-foot">
+        <span>kWh / mes</span>
+        <span class="meter-dial" id="meterDial">000</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CÓMO FUNCIONA -->
+  <section class="section" id="como-funciona">
+    <div class="section-head">
+      <p class="eyebrow">Cómo funciona</p>
+      <h2 class="section-title">Tres pasos. Un minuto.</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Cuéntanos cómo vives</h3>
+        <p>Tu consumo mensual, el tipo de vivienda y qué aparatos de alto consumo usas. Datos que ya tienes a la mano.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>El modelo analiza</h3>
+        <p>Un modelo entrenado con datos reales de miles de hogares clasifica tu perfil de consumo al instante.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Recibe tu diagnóstico</h3>
+        <p>Tu categoría de eficiencia, el costo mensual estimado y recomendaciones concretas para gastar menos.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENEFICIOS -->
+  <section class="section section-alt" id="beneficios">
+    <div class="section-head">
+      <p class="eyebrow">Por qué usarlo</p>
+      <h2 class="section-title">Deja de pagar por lo que no sabías.</h2>
+    </div>
+    <div class="benefits">
+      <div class="benefit">
+        <div class="benefit-mark">↓</div>
+        <h3>Identifica el gasto oculto</h3>
+        <p>Descubre qué aparatos y hábitos disparan tu recibo, sin necesidad de un técnico.</p>
+      </div>
+      <div class="benefit">
+        <div class="benefit-mark">≈</div>
+        <h3>Estima tu costo real</h3>
+        <p>Convierte tu consumo en pesos y entiende cuánto pagas cada mes por tu perfil actual.</p>
+      </div>
+      <div class="benefit">
+        <div class="benefit-mark">→</div>
+        <h3>Recibe acciones claras</h3>
+        <p>Recomendaciones específicas y priorizadas, no consejos genéricos que ya conoces.</p>
+      </div>
+      <div class="benefit">
+        <div class="benefit-mark">⚡</div>
+        <h3>Resultados al instante</h3>
+        <p>Sin registros, sin esperas. Llenas el formulario y ves tu diagnóstico de inmediato.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA final -->
+  <section class="cta-band">
+    <h2>¿Listo para saber qué tan eficiente es tu hogar?</h2>
+    <button class="btn-primary btn-lg" data-goto-form>Analizar mi consumo</button>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-brand"><span class="dot"></span> EnergiAI</div>
+    <p class="footer-note">
+      Análisis de consumo energético doméstico · Hackathon ONE — Alura + Oracle Next Education
+    </p>
+    <p class="footer-fine">Modelo de clasificación servido desde Oracle Cloud Infrastructure.</p>
+  </footer>
+
+</div>
+
+<!-- ================= APP / FORMULARIO ================= -->
+<div id="app" hidden>
   <div class="wrap">
 
-    <header>
+    <button class="back-link" data-goto-landing>← Volver al inicio</button>
+
+    <header class="app-head">
       <div class="brand"><span class="dot"></span> EnergiAI</div>
       <h1>¿Qué tan <span class="accent">eficiente</span> es tu hogar?</h1>
-      <p class="sub">Cuéntanos cómo consumes electricidad y te decimos tu perfil energético, el costo estimado y cómo gastar menos.</p>
+      <p class="sub">Completa los datos de tu vivienda. Toma menos de un minuto.</p>
     </header>
 
     <!-- FORMULARIO -->
     <div class="card">
-      <h2>Datos de tu vivienda</h2>
+      <h2 class="card-title">Datos de tu vivienda</h2>
 
       <div class="grid">
-        <div>
+        <div class="field">
           <label for="consumo">Consumo mensual (kWh)</label>
           <input type="number" id="consumo" min="1" max="2000" step="0.1" placeholder="Ej. 200" value="200">
           <div class="hint">Lo encuentras en tu recibo de luz.</div>
         </div>
-        <div>
+        <div class="field">
           <label for="tipo">Tipo de vivienda</label>
           <select id="tipo">
             <option value="Casa">Casa</option>
@@ -35,13 +164,13 @@
         </div>
       </div>
 
-      <div class="grid" style="margin-top:16px">
-        <div>
+      <div class="grid">
+        <div class="field">
           <label for="cantidad">Cantidad de equipos</label>
-          <input type="number" id="cantidad" min="1" step="1" placeholder="Ej. 8" value="8">
+          <input type="number" id="cantidad" min="1" max="50" step="1" placeholder="Ej. 8" value="8">
           <div class="hint">Total de aparatos eléctricos en casa.</div>
         </div>
-        <div>
+        <div class="field">
           <label>¿Usas aparatos en horario pico? (6–10 pm)</label>
           <div class="toggle-row" id="pico">
             <div class="opt active" data-val="true">Sí</div>
@@ -50,19 +179,59 @@
         </div>
       </div>
 
-      <div style="margin-top:22px">
+      <div class="field field-full">
         <label>Equipos de alto consumo que usas</label>
-        <div class="hint" style="margin-bottom:12px">Marca los que tengas e indica cuánto los usas. Con esto estimamos tu consumo intensivo.</div>
+        <div class="hint hint-block">Marca los que tengas e indica cuánto los usas. Con esto estimamos tu consumo intensivo.</div>
         <div class="equipos" id="equipos"></div>
       </div>
 
-      <button class="btn" id="analizar">Analizar mi consumo</button>
-      <div class="error-box" id="error"></div>
+      <button class="btn-primary btn-block" id="analizar">Analizar mi consumo</button>
+      <p class="form-alt">¿Ya tienes un código? <button class="link-inline" data-goto-consulta type="button">Consulta un análisis previo</button></p>
     </div>
 
-    <!-- RESULTADO -->
-    <div class="card" id="resultado">
-      <h2>Tu resultado</h2>
+  </div>
+</div>
+
+<!-- ================= CONSULTAR ANÁLISIS ================= -->
+<div id="consulta" hidden>
+  <div class="wrap">
+
+    <button class="back-link" data-goto-landing>← Volver al inicio</button>
+
+    <header class="app-head">
+      <div class="brand"><span class="dot"></span> EnergiAI</div>
+      <h1>Consulta un <span class="accent">análisis previo</span></h1>
+      <p class="sub">Ingresa el código que recibiste al analizar tu consumo.</p>
+    </header>
+
+    <div class="card card-consulta">
+      <h2 class="card-title">Buscar por código</h2>
+      <div class="field field-full">
+        <label for="consultaId">Código de análisis</label>
+        <input type="text" id="consultaId" class="input-codigo" placeholder="97f786b3-fe84-483e-b96b-dddb03a853cb" autocomplete="off" spellcheck="false">
+        <div class="hint">Pega aquí el código que aparece en tu resultado.</div>
+      </div>
+      <button class="btn-primary btn-block" id="buscarAnalisis">Buscar análisis</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= MODAL (carga / resultado / error) ================= -->
+<div class="modal-overlay" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="modal-close" id="modalClose" aria-label="Cerrar">×</button>
+
+    <!-- Fase 1: cargando -->
+    <div class="modal-view" id="viewLoading">
+      <div class="spinner"></div>
+      <p class="loading-text" id="loadingText">Analizando tu consumo…</p>
+      <p class="loading-sub" id="loadingSub">Nuestro modelo está evaluando tu perfil energético.</p>
+    </div>
+
+    <!-- Fase 2: resultado -->
+    <div class="modal-view" id="viewResult" hidden>
+      <div class="modal-tag" id="resultTag">Tu resultado</div>
       <div class="verdict">
         <span class="cat" id="r-cat">—</span>
         <span class="prob" id="r-prob"></span>
@@ -74,19 +243,37 @@
         </div>
         <div class="stat">
           <div class="k">Análisis</div>
-          <div class="v" id="r-fecha" style="font-size:15px;font-weight:500">—</div>
+          <div class="v v-sm" id="r-fecha">—</div>
         </div>
       </div>
       <div>
         <div class="k reco-title">Recomendaciones</div>
         <ul class="recos" id="r-recos"></ul>
       </div>
+
+      <!-- Código del análisis para consultarlo después (solo al analizar) -->
+      <div class="id-box" id="idBox">
+        <div class="id-label">Tu código de análisis</div>
+        <div class="id-row">
+          <code class="id-val" id="r-id">—</code>
+          <button class="id-copy" id="copiarId" type="button">Copiar</button>
+        </div>
+        <div class="id-hint">Guárdalo para consultar este análisis más tarde.</div>
+      </div>
+
+      <button class="btn-primary btn-block" id="modalDone">Entendido</button>
     </div>
 
-    <p class="foot">EnergiAI · Hackathon ONE · Modelo servido desde OCI</p>
+    <!-- Fase 3: error -->
+    <div class="modal-view" id="viewError" hidden>
+      <div class="error-icon">!</div>
+      <p class="error-title">No se pudo completar el análisis</p>
+      <p class="error-msg" id="errorMsg">Ocurrió un error.</p>
+      <button class="btn-primary btn-block" id="errorClose">Cerrar</button>
+    </div>
   </div>
+</div>
 
-  <!-- Scripts: como módulos ES. El orden lo maneja el propio import. -->
-  <script type="module" src="js/main.js"></script>
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
