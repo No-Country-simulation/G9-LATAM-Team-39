@@ -1,90 +1,145 @@
-# Data Science
+# EnergiAI — Ciencia de Datos
 
-Preparación de datos, análisis exploratorio, entrenamiento y evaluación del modelo, y serialización del modelo final que se sube a OCI.
+Documentación del frente de **Dataset derivado de ENCEVI + reglas de etiquetado** y
+**EDA + comparación de modelos + serialización + notebook**, parte del MVP de EnergiAI
+para el Hackathon ONE (Alura + Oracle con No Country).
 
-> Flujo completo del proyecto: ver `../docs/flujo-proyecto.md`. Contrato de la API: `../docs/contrato-api.md`. Este README es operativo.
+## Qué contiene esta carpeta
 
-> Reparto por frentes: ver "Frentes de trabajo" en la documentación de No Country.
+| Archivo | Descripción |
+|---|---|
+| `src/Energia.py` | Procesa los 13 CSV de la encuesta ENCEVI 2018 (INEGI) y calcula el consumo eléctrico teórico por hogar, aparato por aparato. Genera `data/processed/01_base_hogares_2018_mvp.csv` con las 5 variables del contrato de la API. |
+| `src/etiquetar_dataset.py` | Toma la base de `Energia.py` y agrega la columna `categoria` (EFICIENTE / MODERADO / INEFICIENTE) con un sistema de puntos multifactor. Genera `data/processed/dataset_entrenamiento.csv`. |
+| `notebooks/EnergiAI_EDA_Modelado.ipynb` | Notebook de EDA, comparación de modelos, evaluación y serialización. |
+| `models/reporte_metricas.json` | Métricas del modelo elegido, en formato consultable sin abrir el notebook. |
+| `models/modelo_energiai.joblib` | Modelo serializado, listo para cargar con `joblib.load()`; se sube a OCI Object Storage para producción. |
 
 ## Cómo correr
 
 ```bash
 # desde data-science/
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Mac/Linux
+
 pip install -r requirements.txt
-jupyter notebook   # abrir notebooks/02_modelado.ipynb
+
+jupyter notebook notebooks/EnergiAI_EDA_Modelado.ipynb
 ```
 
-## Estrategia de datos
+## Cómo reproducir el pipeline completo desde cero
 
-El dataset se construye a partir de los **microdatos reales de ENCEVI 2018 (INEGI)**, no de datos simulados. La descripción del proyecto pide una base propia *"recopilada de fuentes públicas"* y **definir y justificar los criterios** de cada perfil de eficiencia.
-
-El proceso tiene dos pasos encadenados:
-
-1. **`Energia.py`** — lee las 13 tablas de ENCEVI y calcula el consumo **aparato por aparato** (potencia × horas de uso × cantidad). Produce `01_base_hogares_2018_mvp.csv` con 28,763 hogares y las 5 variables del contrato. También genera `02_base_hogares_2026_mvp.csv`, un escenario con equipos eficientes que alimenta las recomendaciones (no se usa para entrenar).
-
-2. **`etiquetar_dataset.py`** — agrega la columna `categoria` con un sistema de puntos multifactor. Produce `dataset_entrenamiento.csv` con exactamente 6 columnas.
+Requiere los 13 CSV de ENCEVI 2018 en `data/raw/`
+(`aireacond.csv`, `cal_agua.csv`, `calefactor.csv`, `cambio.csv`, `electro.csv`,
+`encevi.csv`, `focos.csv`, `hogar.csv`, `otros_eq.csv`, `pantalla.csv`, `persona.csv`,
+`ventilador.csv`, `vivienda.csv`).
 
 ```bash
-python etiquetar_dataset.py
+# desde data-science/
+python src/Energia.py
+python src/etiquetar_dataset.py --in data/processed/01_base_hogares_2018_mvp.csv --out data/processed/dataset_entrenamiento.csv
 ```
 
-Corre sin argumentos. Por defecto busca `01_base_hogares_2018_mvp.csv` **en la carpeta desde donde se ejecuta**, para que se pueda probar rápido dejando el CSV al lado del script.
+Luego abrir `notebooks/EnergiAI_EDA_Modelado.ipynb` y ejecutar todas las celdas
+(`Run All`).
 
-**Ajusten la ruta según dónde tengan los archivos.** Las dos constantes están al inicio del script:
+## Dataset: origen y criterio de etiquetado
 
-```python
-ARCHIVO_ENTRADA = "01_base_hogares_2018_mvp.csv"          # al lado del script
-ARCHIVO_ENTRADA = "data/processed/01_base_hogares_2018_mvp.csv"   # con la estructura de abajo
-```
+Los datos son hogares **reales** de la encuesta ENCEVI 2018 (INEGI), no simulados.
+`Energia.py` calcula el consumo de cada hogar sumando el consumo estimado de cada
+aparato declarado (potencia de referencia × horas de uso × cantidad), no usa el pago
+en pesos reportado en el recibo como variable aproximada ni indicador indirecto de consumo.
 
-Si el script no encuentra el archivo, lo dice con un mensaje claro indicando qué revisar. También se puede pasar la ruta al vuelo sin tocar el código: `python etiquetar_dataset.py --in ruta/al/archivo.csv`.
+**Variables del contrato de la API:**
 
-### Por qué el etiquetado es multifactor
+| Variable | Tipo | Descripción |
+|---|---|---|
+| `consumo_kwh` | número | Consumo mensual estimado en kWh |
+| `uso_horario_pico` | booleano | Uso de algún aparato en horario de mayor demanda |
+| `cantidad_equipos` | entero | Número total de equipos (no incluye focos) |
+| `tipo_inmueble` | texto | `Casa` / `Departamento` / `Otro` |
+| `horas_alto_consumo` | número | Horas equivalentes de carga intensiva (≥1000 W) |
+| `categoria` (objetivo) | texto | `EFICIENTE` / `MODERADO` / `INEFICIENTE` |
 
-La versión inicial asignaba la categoría por terciles de `consumo_kwh`. Al medirlo, el modelo daba **100 % de accuracy con `consumo_kwh` explicando el 100 %** y las otras cuatro variables en 0 %: el usuario llenaría cinco campos y solo uno afectaría el resultado.
+### Por qué el etiquetado es multifactor y no solo por consumo
 
-Con el sistema de puntos (consumo + horario pico + horas + intensidad) las cinco variables aportan: consumo 58.8 %, horas 20.8 %, equipos 14.4 %, pico 5.7 % y tipo de inmueble 0.3 %. Detalle en `../docs/reglas-etiquetado.md`.
+Una primera versión etiquetaba por terciles de `consumo_kwh`. Al medir la importancia
+de variables del modelo entrenado con esa etiqueta, `consumo_kwh` explicaba el 100%
+de la decisión y las otras cuatro variables el 0%: el formulario tendría 5 campos pero
+solo 1 afectaría el resultado, y el problema se resolvería con dos condicionales, sin
+necesidad de machine learning.
 
-## Variables
+`etiquetar_dataset.py` reemplaza esto con un sistema de puntos que combina cuatro
+factores — consumo (ajustado por tipo de vivienda), uso en horario pico, horas de alto
+consumo e intensidad de consumo por equipo — usando los **percentiles del propio
+dataset** como cortes (no valores fijos), para que los umbrales se recalculen solos si
+la base cambia.
 
-Features del modelo: `consumo_kwh`, `uso_horario_pico`, `cantidad_equipos`, `tipo_inmueble`, `horas_alto_consumo`.
-Target: `categoria` ∈ {`EFICIENTE`, `MODERADO`, `INEFICIENTE`}.
+### Límite declarado
 
-El costo, la moneda y las recomendaciones NO son del modelo; los calcula el backend.
+`consumo_kwh` en el dataset de entrenamiento es una estimación física derivada de los
+aparatos declarados por el hogar, no una lectura de medidor — ENCEVI registra el monto
+pagado en pesos, no kilovatios directamente. En producción, este valor lo reporta el
+propio usuario a partir de su recibo de luz.
 
-## Entregables del módulo
+## Resultados del notebook
 
-1. Base derivada de ENCEVI con las 5 variables (`Energia.py`).
-2. Dataset etiquetado de 6 columnas (`etiquetar_dataset.py`).
-3. **EDA**: distribuciones, correlaciones, balance de clases.
-4. **Comparación de modelos**: Regresión Logística, Árbol de Decisión, Random Forest.
-5. **Evaluación**: accuracy, F1 por clase, matriz de confusión.
-6. **Serialización** con Joblib → subir a OCI Object Storage.
+**Balance de clases** (dataset final, `dataset_entrenamiento.csv`, ~28,764 hogares):
 
-## Nota metodológica
+| Categoría | Porcentaje |
+|---|---|
+| EFICIENTE | ~24% |
+| MODERADO | ~28% |
+| INEFICIENTE | ~48% |
 
-Como la etiqueta se deriva de reglas propias, el modelo tiende a re-aprenderlas y el accuracy resulta muy alto (~99 %). Es esperado y correcto para el entregable "modelo supervisado entrenado, evaluado y serializado", pero **debe documentarse con honestidad** en el notebook: el valor está en la justificación de los criterios y en una evaluación limpia, no en el accuracy.
+Ninguna clase por debajo del 15%, umbral que el propio script de etiquetado revisa
+como señal de alerta.
 
-Verificación obligatoria: que **ninguna variable quede en 0 % de importancia**. Si ocurre, avisar al frente de dataset.
+**Comparación de modelos** (Regresión Logística, Árbol de Decisión, Random Forest),
+evaluados con accuracy, F1-macro y validación cruzada de 5 folds. El modelo elegido
+queda documentado automáticamente en `models/reporte_metricas.json` tras correr el
+notebook, junto con sus métricas exactas de la corrida.
+
+**Nota sobre el accuracy alto:** como la etiqueta se deriva de reglas propias sobre las
+mismas variables de entrada, el modelo tiende a re-aprender esas reglas con métricas
+muy altas (~99%). Es un resultado esperado, no una señal de fuga de datos: la curva de
+aprendizaje (sección 7.6 del notebook) **confirma una brecha pequeña entre entrenamiento
+y validación cruzada, sin evidencia fuerte de sobreajuste.**
+
+## Qué recibe Backend / inference-service
+
+- `models/modelo_energiai.joblib`: pipeline completo de scikit-learn (preprocesamiento
+  + clasificador) — recibe un DataFrame con las 5 columnas del contrato y devuelve la
+  categoría directamente vía `.predict()`, sin necesidad de reimplementar la
+  codificación de variables en Java o Python.
+- `models/reporte_metricas.json`: métricas y metadatos del modelo, para documentación
+  sin necesidad de correr el notebook.
+- Función `generar_recomendaciones()` (sección 8 del notebook): lógica de reglas para
+  las recomendaciones de texto, lista para portar al backend o al inference-service.
+- Tarifa de referencia usada: **$0.75 por kWh**.
 
 ## Estructura
 
 ```
 data-science/
 ├── data/
-│   ├── raw/         # los 13 CSV de ENCEVI (no versionar: son pesados)
-│   └── processed/   # base_mvp y dataset_entrenamiento
+│   ├── processed/
+│   │   └── dataset_entrenamiento.csv       # Dataset final procesado
+│   └── raw/
+│       └── encevi_2018_base_de_datos_csv.zip # ZIP original de la ENCEVI
+├── models/
+│   └── modelo_energiai.joblib              # Modelo entrenado y serializado
 ├── notebooks/
-│   ├── 01_eda.ipynb
-│   └── 02_modelado.ipynb
+│   ├── EnergiAI_EDA_Modelado.ipynb         # EDA, experimentación y modelado
+│   └── README.md                           # Documentación específica de notebooks
 ├── src/
-│   ├── Energia.py             # ENCEVI -> 5 variables
-│   └── etiquetar_dataset.py   # + categoria
-├── models/          # model.joblib
-└── requirements.txt
+│   ├── Energia.py                          # Procesamiento de variables ENCEVI
+│   └── etiquetar_dataset.py                # Reglas de etiquetado del dataset
+├── README.md                               # Documentación general del proyecto
+└── requirements.txt                        # Dependencias y librerías del proyecto
 ```
 
 ## Estado
 
-Dataset construido y etiquetado. Pendiente: EDA, comparación de modelos y serialización.
+Dataset construido y etiquetado. EDA, comparación de modelos y serialización
+completos. Modelo listo para consumo por el inference-service.
