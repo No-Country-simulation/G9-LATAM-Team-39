@@ -241,15 +241,15 @@ python3 -m http.server 5500
 
 Proyecto desarrollado por el equipo **G9-LATAM-Team-39**:
 
-| Integrante | Rol |
-|---|---|
-| **Sergio Tadeo Carrillo Montoya** | Data Science · Líder de equipo |
-| **Fernando Contreras Albarrán** | Data Analyst |
-| **Raúl Gilberto Muñoz González** | Data Science |
-| **Brainer Fallas Prado** | Data Science |
-| **Paul Stuart Ruiz Cabrera** | Backend |
-| **Ivan Luviano Sixtos** | Backend |
-| **Anderson Mateo Coello Jaramillo** | Backend · DevOps |
+| Integrante | Rol | Actividad | 
+|---|---|---|
+| **Sergio Tadeo Carrillo Montoya** | Data Science · Líder de equipo | Etiquetado del modelo, FrontEnd de la aplicación, apoyo en BackEnd y Levantar OCI Storage para el modelo |
+| **Fernando Contreras Albarrán** | Data Analyst | Entrenamiento del modelo machine learning |
+| **Raúl Gilberto Muñoz González** | Data Science | Investigación de la data |
+| **Brainer Fallas Prado** | Data Science | Apoyo en FrontEnd|
+| **Paul Stuart Ruiz Cabrera** | Backend | Encargado de contruir la API (java) pruebas |
+| **Ivan Luviano Sixtos** | Backend | Encargado de la funcionalidad y logica completa del backend |
+| **Anderson Mateo Coello Jaramillo** | Backend · DevOps | Encargado de levantar los servicios en render y vercel |
 
 
 
