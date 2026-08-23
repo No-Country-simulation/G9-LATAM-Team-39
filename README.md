@@ -243,7 +243,7 @@ Proyecto desarrollado por el equipo **G9-LATAM-Team-39**:
 
 | Integrante | Rol | Actividad | 
 |---|---|---|
-| **Sergio Tadeo Carrillo Montoya** | Data Science · Líder de equipo | Etiquetado del modelo, FrontEnd de la aplicación, apoyo en BackEnd y Levantar OCI Storage para el modelo |
+| **Sergio Tadeo Carrillo Montoya** | Data Science · Líder de equipo | Etiquetado del modelo, FrontEnd de la aplicación, apoyo en BackEnd, Servicio de Inference (FastAPI) y Levantar OCI Storage para el modelo |
 | **Fernando Contreras Albarrán** | Data Analyst | Entrenamiento del modelo machine learning |
 | **Raúl Gilberto Muñoz González** | Data Science | Investigación de la data |
 | **Brainer Fallas Prado** | Data Science | Apoyo en FrontEnd|
